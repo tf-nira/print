@@ -20,6 +20,7 @@ on:
       - develop
       - MOSIP*
       - release*
+      - niradev*
 
 jobs:
   build-maven-print:
