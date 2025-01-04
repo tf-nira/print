@@ -46,4 +46,12 @@ public class Print {
 		return new ResponseEntity<>("request accepted.", HttpStatus.OK);
 	}
 
+	@PostMapping(path = "/callback/notifyPrintTest", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> handleSubscribeEventTest(@RequestBody EventModel eventModel) throws Exception {
+		printLogger.info("event recieved from websub"+", id: {}",eventModel.getEvent().getId());
+		printLogger.info("event recieved from websub"+", eventModel: {}",eventModel);
+		printLogger.info("printing status : {} for event id: {}",true,eventModel.getEvent().getId());
+		return new ResponseEntity<>("request accepted.", HttpStatus.OK);
+	}
+
 }
