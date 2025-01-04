@@ -48,7 +48,7 @@ jobs:
       OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
       GPG_SECRET: ${{ secrets.GPG_SECRET }}
 
-  ## Recreate zips to provide support for docker unzip operation
+  ### Recreate zips to provide support for docker unzip operation
   recreate-zips:
     needs: build-maven-print
     runs-on: ubuntu-latest
