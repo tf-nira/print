@@ -14,15 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 import io.mosip.kernel.websub.api.annotation.PreAuthenticateContentAndVerifyIntent;
 import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.model.EventModel;
-import io.mosip.print.service.PrintService;
 
 @RestController
 @RequestMapping(value = "/print")
 public class Print {
 
-	/** The printservice. */
-	@Autowired
-	private PrintService printService;
+	// /** The printservice. */
+	// @Autowired
+	// private PrintService printService;
 	
 	@Value("${mosip.event.topic}")
 	private String topic;
