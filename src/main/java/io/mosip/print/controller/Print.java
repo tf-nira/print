@@ -55,7 +55,7 @@ public class Print {
 	}
 
 	@PostMapping(path = "/callback/testNotifyPrint", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)	
-	public ResponseEntity<String> handleSubscribeEventTest(@RequestBody EventModel eventModel) throws Exception {
+	public ResponseEntity<String> subscribeEvent(@RequestBody EventModel eventModel) throws Exception {
 		printLogger.info("event recieved from websub"+", id: {}",eventModel.getEvent().getId());
 		printLogger.info("event recieved from websub"+", eventModel: {}",eventModel);
 		printLogger.info("printing status : {} for event id: {}",true,eventModel.getEvent().getId());
