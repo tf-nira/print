@@ -1,6 +1,6 @@
-[![Maven Package upon a push](https://github.com/mosip/print/actions/workflows/push_trigger.yml/badge.svg?branch=release-1.2.0)](https://github.com/mosip/print/actions/workflows/push_trigger.yml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?branch=release-1.2.0&project=mosip_admin-services&id=mosip_admin-services&metric=alert_status)](https://sonarcloud.io/dashboard?branch=release-1.2.0&id=mosip_admin-services)
-# Print Service
+[![Maven Package upon a push](https://github.com/mosip/print/actions/workflows/push_trigger.yml/badge.svg?branch=release-1.2.0.1)](https://github.com/mosip/print/actions/workflows/push_trigger.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?branch=release-1.2.0.1&project=mosip_admin-services&id=mosip_admin-services&metric=alert_status)](https://sonarcloud.io/dashboard?branch=release-1.2.0.1&id=mosip_admin-services)
+# Print Service 
 
 ## Overview
 A reference implementation to print `euin`, `reprint`, `qrcode` [credential types](https://docs.mosip.io/1.2.0/modules/id-repository#credential-types) in PDF format. This service is intended to be custimized and used by a card printing agency who need to onboard onto MOSIP as [Credential Partner](https://docs.mosip.io/1.2.0/partners#credential-partner-cp) before deploying the service.  
@@ -30,6 +30,5 @@ Refer to the [configuration guide](docs/configuration.md).
 
 ## Test
 Automated functaionl tests available in [Functional Tests repo](https://github.com/mosip/mosip-functional-tests).
-
 ## License
 This project is licensed under the terms of [Mozilla Public License 2.0](LICENSE).

@@ -844,4 +844,3 @@ public class PrintServiceImpl implements PrintService{
 		webSubSubscriptionHelper.cardNumberPublishEvent(topic, data);
 	}
 }
-	

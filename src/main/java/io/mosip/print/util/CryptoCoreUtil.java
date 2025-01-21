@@ -31,23 +31,16 @@ import javax.crypto.spec.OAEPParameterSpec;
 import javax.crypto.spec.PSource.PSpecified;
 import javax.crypto.spec.SecretKeySpec;
 
-import io.mosip.print.constant.LoggerFileConstant;
-import io.mosip.print.exception.ExceptionUtils;
-import io.mosip.print.logger.PrintLogger;
-import io.mosip.print.service.impl.PrintServiceImpl;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.bouncycastle.crypto.InvalidCipherTextException;
-import org.bouncycastle.crypto.digests.SHA256Digest;
-import org.bouncycastle.crypto.encodings.OAEPEncoding;
-import org.bouncycastle.crypto.engines.RSAEngine;
-import org.bouncycastle.crypto.params.RSAKeyParameters;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.mosip.kernel.core.crypto.exception.InvalidParamSpecException;
+import io.mosip.print.constant.LoggerFileConstant;
 import io.mosip.print.exception.CryptoManagerException;
 import io.mosip.print.exception.PlatformErrorMessages;
+import io.mosip.print.logger.PrintLogger;
 
 @Component
 public class CryptoCoreUtil {
@@ -75,30 +68,30 @@ public class CryptoCoreUtil {
 
 
 	public String decrypt(String data) {
-		String decryptedData=null;
 		try {
 			PrivateKeyEntry privateKeyEntry = loadP12();
 			byte[] dataBytes = org.apache.commons.codec.binary.Base64.decodeBase64(data);
-			byte[] data1 = decryptData(dataBytes, privateKeyEntry);
-			decryptedData = new String(data1);
+			byte[] decryptedDataBytes = decryptData(dataBytes, privateKeyEntry);
+			return new String(decryptedDataBytes);
 		}catch (Exception e){
-			printLogger.error( "Not able to decrypt the data : {}" ,e);
+			printLogger.error( "Not able to decrypt the data : {}", e);
 		}
-		return decryptedData;
+		throw new CryptoManagerException(PlatformErrorMessages.PRT_UNKNOWN_DECRYPTION_EXCEPTION.getCode(),
+				PlatformErrorMessages.PRT_UNKNOWN_DECRYPTION_EXCEPTION.getMessage());
 	}
 
 	public PrivateKeyEntry loadP12(){
-		PrivateKeyEntry privateKeyEntry = null;
 		try {
 			KeyStore mosipKeyStore = KeyStore.getInstance("PKCS12");
 			InputStream in = getClass().getClassLoader().getResourceAsStream(fileName);
 			mosipKeyStore.load(in, cyptoPassword.toCharArray());
 			ProtectionParameter password = new PasswordProtection(cyptoPassword.toCharArray());
-			privateKeyEntry = (PrivateKeyEntry) mosipKeyStore.getEntry(alias, password);
+			return (PrivateKeyEntry) mosipKeyStore.getEntry(alias, password);
 		}catch (UnrecoverableEntryException | CertificateException | KeyStoreException | IOException|NoSuchAlgorithmException e) {
-			printLogger.error( "Not able to decrypt the data : {}" ,e);
+			printLogger.error( "Not able to load the key from keystore : {}", e);
 		}
-		return privateKeyEntry;
+		throw new CryptoManagerException(PlatformErrorMessages.PRT_INVALID_KEY_EXCEPTION.getCode(),
+				PlatformErrorMessages.PRT_INVALID_KEY_EXCEPTION.getMessage());
 	}
 
 	public byte[] decryptData(byte[] requestData, PrivateKeyEntry privateKey)  {
@@ -138,9 +131,10 @@ public class CryptoCoreUtil {
 				return symmetricDecrypt(symmetricKey, encryptedData, null);
 			}
 		} catch (Exception e) {
-			printLogger.error( "Not able to decrypt the data : {}" ,e);
+			printLogger.error( "Not able to decrypt the data : {}", e);
 		}
-		return null;
+		throw new CryptoManagerException(PlatformErrorMessages.PRT_UNKNOWN_DECRYPTION_EXCEPTION.getCode(),
+				PlatformErrorMessages.PRT_UNKNOWN_DECRYPTION_EXCEPTION.getMessage());
 	}
 
 	public byte[] parseEncryptKeyHeader(byte[] encryptedKey) {
@@ -201,23 +195,6 @@ public class CryptoCoreUtil {
 		} catch (InvalidAlgorithmParameterException e) {
 			throw new InvalidAlgorithmParameterException(e);
 		}
-	}
-
-	/**
-	 *
-	 * @param paddedPlainText
-	 * @return
-	 * @throws InvalidCipherTextException
-	 * @throws InvalidKeyException
-	 */
-	private static byte[] unpadOAEPPadding(byte[] paddedPlainText, BigInteger keyModulus)
-			throws InvalidCipherTextException {
-
-		OAEPEncoding encode = new OAEPEncoding(new RSAEngine(), new SHA256Digest());
-		BigInteger exponent = new BigInteger("1");
-		RSAKeyParameters keyParams = new RSAKeyParameters(false, keyModulus, exponent);
-		encode.init(false, keyParams);
-		return encode.processBlock(paddedPlainText, 0, paddedPlainText.length);
 	}
 
 	private static byte[] symmetricDecrypt(SecretKey key, byte[] data, byte[] aad) {
