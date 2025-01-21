@@ -32,9 +32,10 @@ jobs:
       OSSRH_SECRET: ${{ secrets.OSSRH_SECRET }}
       OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-    env:
-      GPG_PASSPHRASE: ${{ secrets.GPG_SECRET }}  # Pass the secret as an environment variable here
-
+    steps:
+      - name: Set up GPG passphrase
+        run: echo "GPG_PASSPHRASE=${{ secrets.GPG_SECRET }}" >> $GITHUB_ENV
+    
   publish_to_nexus:
     if: "${{ !contains(github.ref, 'master') && github.event_name != 'pull_request' && github.event_name != 'release' && github.event_name != 'prerelease' && github.event_name != 'publish' }}"
     needs: build-maven-print
