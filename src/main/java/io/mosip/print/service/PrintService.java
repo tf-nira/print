@@ -1,5 +1,6 @@
 package io.mosip.print.service;
 
+import io.mosip.print.dto.CardUpdateRequestDto;
 import io.mosip.print.model.EventModel;
 
 public interface PrintService {
@@ -14,8 +15,5 @@ public interface PrintService {
 	 */
 	public boolean generateCard(EventModel eventModel) throws Exception;
 
-	// Map<String, byte[]> getDocuments(String credentialSubject, String sign,
-	// String cardType,
-	// boolean isPasswordProtected);
-	
+	public void updateCardStatus(CardUpdateRequestDto cardUpdateInput);
 }

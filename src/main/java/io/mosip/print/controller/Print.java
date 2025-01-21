@@ -1,10 +1,7 @@
 package io.mosip.print.controller;
 
-import io.mosip.print.constant.LoggerFileConstant;
-
-import io.mosip.print.exception.PlatformErrorMessages;
+import io.mosip.print.dto.CardUpdateRequestDto;
 import io.mosip.print.logger.PrintLogger;
-import io.mosip.print.service.impl.PrintServiceImpl;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.mosip.kernel.websub.api.annotation.PreAuthenticateContentAndVerifyIntent;
-import io.mosip.print.exception.RegPrintAppException;
 import io.mosip.print.model.EventModel;
 import io.mosip.print.service.PrintService;
 
@@ -50,5 +46,12 @@ public class Print {
 		printLogger.info("printing status : {} for event id: {}",isPrinted,eventModel.getEvent().getId());
 		return new ResponseEntity<>("request accepted.", HttpStatus.OK);
 	}
-
+	
+	@PostMapping(path ="/external/updateStatus")
+	public String updateCardStatus(@RequestBody CardUpdateRequestDto cardUpdateRequest) {
+		printLogger.info("Data received " + ", id: {} ", cardUpdateRequest.getTopic());
+		printService.updateCardStatus(cardUpdateRequest);
+		printLogger.info("Data published " + ", id: {} ", cardUpdateRequest.getTopic());
+		return "Success";
+	}
 }
