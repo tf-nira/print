@@ -1,4 +1,5 @@
-##name: Maven Package upon a push
+name: Maven Package upon a push
+
 on:
   release:
     types: [published]
@@ -19,13 +20,12 @@ on:
       - develop
       - MOSIP*
       - release*
-      - tf_nira_dev
 
 jobs:
-    build-maven-print:
+  build-maven-print:
     uses: mosip/kattu/.github/workflows/maven-build.yml@master
     with:
-      SERVICE_LOCATION: ./  # Location of the Maven project
+      SERVICE_LOCATION: ./
       BUILD_ARTIFACT: print-service
     secrets:
       OSSRH_USER: ${{ secrets.OSSRH_USER }}
@@ -33,17 +33,6 @@ jobs:
       OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
       GPG_SECRET: ${{ secrets.GPG_SECRET }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
-    steps:
-      - name: Setup GPG Key
-        run: |
-          echo "${{ secrets.GPG_SECRET }}" | gpg --batch --import
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          echo RELOADAGENT | gpg-connect-agent
-
-      - name: Build and Sign Artifacts
-        env:
-          GPG_TTY: ${{ secrets.GPG_PASSPHRASE }}
-        run: mvn clean install -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
 
   publish_to_nexus:
     if: "${{ !contains(github.ref, 'master') && github.event_name != 'pull_request' && github.event_name != 'release' && github.event_name != 'prerelease' && github.event_name != 'publish' }}"
