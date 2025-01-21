@@ -17,6 +17,7 @@ import io.mosip.kernel.websub.api.model.SubscriptionChangeRequest;
 import io.mosip.kernel.websub.api.model.SubscriptionChangeResponse;
 import io.mosip.kernel.websub.api.model.UnsubscriptionRequest;
 import io.mosip.print.constant.LoggerFileConstant;
+import io.mosip.print.dto.CardNumberUpdateDto;
 import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.model.CredentialStatusEvent;
 import org.springframework.web.client.RestTemplate;
@@ -44,6 +45,9 @@ public class WebSubSubscriptionHelper {
 	@Autowired
 	private PublisherClient<String, CredentialStatusEvent, HttpHeaders> pb;
 
+	@Autowired
+	private PublisherClient<String, CardNumberUpdateDto, HttpHeaders> cardNumberUpdatePublisher;
+	
 	@Autowired
 	private RestTemplate restTemplate;
 
@@ -84,6 +88,16 @@ public class WebSubSubscriptionHelper {
 				webSubHubUrl);
 		} catch (WebSubClientException e) {
 			LOGGER.info("websub publish update error {} {}", WEBSUBSUBSCRIPTIONHEPLER, INITSUBSCRIPTION);
+		}
+	}
+	
+	public void cardNumberPublishEvent(String topic, CardNumberUpdateDto cardNumberUpdateData) {
+		try {
+		HttpHeaders headers = new HttpHeaders();
+		cardNumberUpdatePublisher.publishUpdate(topic, cardNumberUpdateData, MediaType.APPLICATION_JSON_UTF8_VALUE, headers,
+				webSubHubUrl);
+		} catch (WebSubClientException e) {
+			LOGGER.info("websub cardNumberPublishEvent update error {} {}", WEBSUBSUBSCRIPTIONHEPLER, INITSUBSCRIPTION);
 		}
 	}
 

@@ -14,4 +14,6 @@ public class StatusEvent {
 		private String status;
 		
 		private String url;
+		
+		private String errorMsg;
 }
