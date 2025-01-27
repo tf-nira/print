@@ -291,9 +291,9 @@ public class PrintServiceImpl implements PrintService{
 		try {
 			credentialSubject = getCrdentialSubject(credential);
 			org.json.JSONObject credentialSubjectJson = new org.json.JSONObject(credentialSubject);
-			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);
-			printLogger.info("decryptedJson :" + decryptedJson.toString());
-			individualBio = decryptedJson.getString("biometrics");
+			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);			
+			individualBio = decryptedJson.getString("Face");
+			printLogger.info("individualBio :" + individualBio);
 			String individualBiometric = new String(individualBio);
 			uin = decryptedJson.getString("UIN");
 			boolean isPhotoSet = setApplicantPhoto(individualBiometric, attributes);
