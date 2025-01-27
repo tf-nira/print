@@ -294,18 +294,25 @@ public class PrintServiceImpl implements PrintService{
 			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);			
 			individualBio = decryptedJson.getString("Face");			
 			String individualBiometric = new String(individualBio);
-			uin = decryptedJson.getString("National ID Number (NIN)");
-			printLogger.info("uin :" + uin);
+			uin = decryptedJson.getString("National ID Number (NIN)");			
 			boolean isPhotoSet = setApplicantPhoto(individualBiometric, attributes);
 			if (!isPhotoSet) {
 				printLogger.debug(PlatformErrorMessages.PRT_PRT_APPLICANT_PHOTO_NOT_SET.name());
 			}
+			printLogger.info("isPhotoSet :" + isPhotoSet);
+			try {
 			setTemplateAttributes(decryptedJson.toString(), attributes);
+			}catch (Exception e) {
+				printLogger.info("Error in setTemplateAttributes");
+			}
 			attributes.put(IdType.UIN.toString(), uin);
-
+try {
 			String textFileString = createTextFile(decryptedJson.toString());
 			printLogger.info("Decrypted print attributes: " + textFileString);
 			isTransactionSuccessful = true;
+}catch (Exception e) {
+	printLogger.info("Error in createTextFile");
+}
 		} catch (QrcodeGenerationException e) {
 			description.setMessage(PlatformErrorMessages.PRT_PRT_QR_CODE_GENERATION_ERROR.getMessage());
 			description.setCode(PlatformErrorMessages.PRT_PRT_QR_CODE_GENERATION_ERROR.getCode());
