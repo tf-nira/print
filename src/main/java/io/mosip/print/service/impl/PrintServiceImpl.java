@@ -63,10 +63,12 @@ import io.mosip.print.dto.CardUpdateRequestDto;
 import io.mosip.print.dto.CryptoWithPinRequestDto;
 import io.mosip.print.dto.CryptoWithPinResponseDto;
 import io.mosip.print.dto.DataShare;
+import io.mosip.print.dto.ErrorDTO;
 import io.mosip.print.dto.EventData;
 import io.mosip.print.dto.EventDetails;
 import io.mosip.print.dto.EventTypeDto;
 import io.mosip.print.dto.JsonValue;
+import io.mosip.print.dto.UpdateStatusResponseDto;
 import io.mosip.print.dto.VidRequestDto;
 import io.mosip.print.dto.VidResponseDTO;
 import io.mosip.print.exception.ApiNotAccessibleException;
@@ -810,13 +812,19 @@ try {
 	}
 
 	@Override
-	public void updateCardStatus(CardUpdateRequestDto cardUpdateInput) {
+	public UpdateStatusResponseDto updateCardStatus(CardUpdateRequestDto cardUpdateInput) {
+		UpdateStatusResponseDto response = new UpdateStatusResponseDto();
+		ErrorDTO error = null;
 		printLogger.debug("Data received from perso system : " + cardUpdateInput);
 		if (cardUpdateInput.getTopic().equalsIgnoreCase("CREDENTIAL_STATUS_UPDATE")) {
 			try {
 				printStatusUpdate(cardUpdateInput.getEvent().getTransactionId(), null, cardUpdateInput.getTopic(),
 						cardUpdateInput.getEvent().getMsg());
+				response.setSuccess(true);
 			} catch (Exception e) {
+				error = new ErrorDTO();
+				error.setErrorCode("500");
+				error.setMessage("Error while publishing the data for topic " + cardUpdateInput.getTopic() + " "+ e.getMessage());
 				printLogger.error("Error while publishing the data for topic " + cardUpdateInput.getTopic(), e);
 				e.printStackTrace();
 			}
@@ -824,10 +832,23 @@ try {
 		if (cardUpdateInput.getTopic().equalsIgnoreCase("CARD_NUMBER_UPDATE")) {
 			try {
 				printCardNumberUpdate(cardUpdateInput);
+				response.setSuccess(true);
 			} catch (Exception e) {
+				error = new ErrorDTO();
+				error.setErrorCode("500");
+				error.setMessage("Error while publishing the data for topic " + cardUpdateInput.getTopic() + " "+ e.getMessage());
 				printLogger.error("Error while publishing the data for topic " + cardUpdateInput.getTopic(), e);
 			}
 		}
+		if(!response.isSuccess() && error == null ) {
+			error = new ErrorDTO();
+			error.setErrorCode("500");
+			error.setMessage("provided topic  " + cardUpdateInput.getTopic() + " is not supported");			;
+		}
+		if(error != null) {
+			response.setError(error);
+		}
+		return response;
 	}
 
 	private void printCardNumberUpdate(CardUpdateRequestDto cardUpdateInput) {
