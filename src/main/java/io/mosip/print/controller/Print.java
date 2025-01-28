@@ -1,6 +1,8 @@
 package io.mosip.print.controller;
 
 import io.mosip.print.dto.CardUpdateRequestDto;
+import io.mosip.print.dto.UpdateStatusResponseDto;
+
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,10 +51,8 @@ public class Print {
 	}
 	
 	@PostMapping(path ="/external/updateStatus")
-	public String updateCardStatus(@RequestBody CardUpdateRequestDto cardUpdateRequest) {
+	public UpdateStatusResponseDto updateCardStatus(@RequestBody CardUpdateRequestDto cardUpdateRequest) {
 		printLogger.info("Data received " + ", id: {} ", cardUpdateRequest.getTopic());
-		printService.updateCardStatus(cardUpdateRequest);
-		printLogger.info("Data published " + ", id: {} ", cardUpdateRequest.getTopic());
-		return "Success";
+		return printService.updateCardStatus(cardUpdateRequest);
 	}
 }
