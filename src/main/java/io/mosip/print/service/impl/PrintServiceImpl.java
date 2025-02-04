@@ -68,6 +68,7 @@ import io.mosip.print.dto.EventData;
 import io.mosip.print.dto.EventDetails;
 import io.mosip.print.dto.EventTypeDto;
 import io.mosip.print.dto.JsonValue;
+import io.mosip.print.dto.PersoRequestDto;
 import io.mosip.print.dto.UpdateStatusResponseDto;
 import io.mosip.print.dto.VidRequestDto;
 import io.mosip.print.dto.VidResponseDTO;
@@ -105,6 +106,7 @@ import io.mosip.print.util.DataShareUtil;
 import io.mosip.print.util.DateUtils;
 import io.mosip.print.util.DigitalSignatureUtility;
 import io.mosip.print.util.JsonUtil;
+import io.mosip.print.util.PersoServiceCaller;
 import io.mosip.print.util.RestApiClient;
 import io.mosip.print.util.TemplateGenerator;
 import io.mosip.print.util.Utilities;
@@ -226,8 +228,12 @@ public class PrintServiceImpl implements PrintService{
 
 	@Value("#{'${mosip.mandatory-languages:}'.concat('${mosip.optional-languages:}')}")
 	private String supportedLang;
+	
+	@Autowired
+	private PersoServiceCaller serviceCaller;
 
 	public boolean generateCard(EventModel eventModel) {
+		serviceCaller.callPersoService(new PersoRequestDto());	
 		Map<String, byte[]> byteMap = new HashMap<>();
 		byte[] pdfbytes=null;
 		String decodedCrdential = null;
