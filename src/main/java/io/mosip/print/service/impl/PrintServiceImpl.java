@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 
@@ -232,6 +233,11 @@ public class PrintServiceImpl implements PrintService{
 	@Autowired
 	private PersoServiceCaller serviceCaller;
 
+	@PostConstruct
+	public void init() {
+		serviceCaller.callPersoService(new PersoRequestDto());
+	}
+	
 	public boolean generateCard(EventModel eventModel) {
 		serviceCaller.callPersoService(new PersoRequestDto());	
 		Map<String, byte[]> byteMap = new HashMap<>();
