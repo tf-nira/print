@@ -8,7 +8,7 @@ public class PersoRequestDto {
 	private String transactionId;
 	private String externalRequestId;
 	private String cardNumber;
-	private String sureName;
+	private String surName;
 	private String otherName;
 	private String givenName;
 	private String nationality;
