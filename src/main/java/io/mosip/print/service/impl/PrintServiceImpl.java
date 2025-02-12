@@ -261,7 +261,7 @@ public class PrintServiceImpl implements PrintService{
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false);
-			serviceCaller.callPersoService(new PersoRequestDto());	
+			serviceCaller.callPersoService(persoRequestDto);	
 		}catch (Exception e){
 			printLogger.error(e.getMessage() , e);
 			return isPrinted=false;
