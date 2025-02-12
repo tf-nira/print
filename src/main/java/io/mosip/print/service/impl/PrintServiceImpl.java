@@ -59,6 +59,7 @@ import io.mosip.print.constant.PlatformSuccessMessages;
 import io.mosip.print.constant.QrVersion;
 import io.mosip.print.constant.UinCardType;
 import io.mosip.print.core.http.RequestWrapper;
+import io.mosip.print.dto.BestTwoFingerDto;
 import io.mosip.print.dto.CardNumberUpdateDto;
 import io.mosip.print.dto.CardUpdateRequestDto;
 import io.mosip.print.dto.CryptoWithPinRequestDto;
@@ -68,7 +69,10 @@ import io.mosip.print.dto.ErrorDTO;
 import io.mosip.print.dto.EventData;
 import io.mosip.print.dto.EventDetails;
 import io.mosip.print.dto.EventTypeDto;
+import io.mosip.print.dto.FingerPrintDto;
 import io.mosip.print.dto.JsonValue;
+import io.mosip.print.dto.PersoAddressDto;
+import io.mosip.print.dto.PersoBiometricsDto;
 import io.mosip.print.dto.PersoRequestDto;
 import io.mosip.print.dto.UpdateStatusResponseDto;
 import io.mosip.print.dto.VidRequestDto;
@@ -233,13 +237,9 @@ public class PrintServiceImpl implements PrintService{
 	@Autowired
 	private PersoServiceCaller serviceCaller;
 
-	@PostConstruct
-	public void init() {
-		serviceCaller.callPersoService(new PersoRequestDto());
-	}
 	
 	public boolean generateCard(EventModel eventModel) {
-		serviceCaller.callPersoService(new PersoRequestDto());	
+		
 		Map<String, byte[]> byteMap = new HashMap<>();
 		byte[] pdfbytes=null;
 		String decodedCrdential = null;
@@ -258,9 +258,10 @@ public class PrintServiceImpl implements PrintService{
 			Map proofMap = new HashMap<String, String>();
 			proofMap = (Map) eventModel.getEvent().getData().get("proof");
 			String sign = proofMap.get("signature").toString();
-			pdfbytes = getDocuments(decodedCrdential,
+			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false).get("uinPdf");
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false);
+			serviceCaller.callPersoService(new PersoRequestDto());	
 		}catch (Exception e){
 			printLogger.error(e.getMessage() , e);
 			return isPrinted=false;
@@ -285,11 +286,12 @@ public class PrintServiceImpl implements PrintService{
 	 */
 
 	@SuppressWarnings("rawtypes")
-	private Map<String, byte[]> getDocuments(String credential, String credentialType, String encryptionPin,
+	private PersoRequestDto getPersoRequest(String credential, String credentialType, String encryptionPin,
 			String requestId, String sign,
 			String cardType,
 			boolean isPasswordProtected) {
 		printLogger.debug("PrintServiceImpl::getDocuments()::entry");
+		PersoRequestDto persoRequestDto=new PersoRequestDto();
 		String credentialSubject;
 		Map<String, byte[]> byteMap = new HashMap<>();
 		String uin = null;
@@ -306,16 +308,49 @@ public class PrintServiceImpl implements PrintService{
 			credentialSubject = getCrdentialSubject(credential);
 			org.json.JSONObject credentialSubjectJson = new org.json.JSONObject(credentialSubject);
 			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);			
-			individualBio = decryptedJson.getString("Face");			
-			String individualBiometric = new String(individualBio);
-			uin = decryptedJson.getString("National ID Number (NIN)");			
-			boolean isPhotoSet = setApplicantPhoto(individualBiometric, attributes);
-			if (!isPhotoSet) {
-				printLogger.debug(PlatformErrorMessages.PRT_PRT_APPLICANT_PHOTO_NOT_SET.name());
-			}
-			printLogger.info("isPhotoSet :" + isPhotoSet);
+		
 			try {
 			setTemplateAttributes(decryptedJson.toString(), attributes);
+			PersoAddressDto persoAddressDto=new PersoAddressDto();
+			persoAddressDto.setCounty(getAttribute(attributes,"applicantPlaceOfResidenceCounty_eng"));
+			persoAddressDto.setDistrict(getAttribute(attributes,"applicantPlaceOfResidenceDistrict_eng"));
+			persoAddressDto.setSubCounty(getAttribute(attributes,"applicantPlaceOfResidenceSubCounty_eng"));
+			persoAddressDto.setParish(getAttribute(attributes,"applicantPlaceOfResidenceParish_eng"));
+			persoAddressDto.setVillage(getAttribute(attributes,"applicantPlaceOfResidenceVillage_eng"));
+			persoRequestDto.setAddress(persoAddressDto);
+			persoRequestDto.setNationality(decryptedJson.getString("NIN"));
+			persoRequestDto.setDateOfIssuance(decryptedJson.getString("dateOfIssuance"));
+			persoRequestDto.setDateOfExpiry(decryptedJson.getString("dateOfExpiry"));
+			persoRequestDto.setNationality(decryptedJson.getString("Nationality"));
+			persoRequestDto.setGivenName(getAttribute(attributes,"givenName_eng"));
+			persoRequestDto.setOtherName(getAttribute(attributes,"otherNames_eng"));
+			persoRequestDto.setSurName(getAttribute(attributes,"surname_eng"));
+			persoRequestDto.setSexCode(getAttribute(attributes,"gender_eng"));
+			persoRequestDto.setDateOfBirth(decryptedJson.getString("dateOfBirth"));
+			persoRequestDto.setExternalRequestId(requestId);
+			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
+			String faceCbeff = decryptedJson.getString("Face");	
+			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
+			String irisCbeff = decryptedJson.getString("Iris");	
+			persoBiometricsDto.setLeftIris(getBiometrics(faceCbeff, "IRIS", "Left"));
+			persoBiometricsDto.setRightIris(getBiometrics(faceCbeff, "IRIS", "Right"));
+			persoBiometricsDto.setSignature(decryptedJson.getString("signature"));
+			Object obj=decryptedJson.get("bestTwoFingers");
+			BestTwoFingerDto[] bestTwoFingerDtos = JsonUtil.mapJsonNodeToJavaObject(BestTwoFingerDto.class, (JSONArray) obj);
+			if(bestTwoFingerDtos[0]!=null) {
+				BestTwoFingerDto bestTwoFingerDtoFirst = bestTwoFingerDtos[0];
+				FingerPrintDto fingerPrintDto=new FingerPrintDto();
+				fingerPrintDto.setIndex(1);
+				fingerPrintDto.setImage(getBiometrics(bestTwoFingerDtoFirst.getFingerPrint(), "Finger",bestTwoFingerDtoFirst.getFingersIndex()));
+				persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
+			}
+			if(bestTwoFingerDtos[1]!=null) {
+				BestTwoFingerDto bestTwoFingerDtoFirst = bestTwoFingerDtos[1];
+				FingerPrintDto fingerPrintDto=new FingerPrintDto();
+				fingerPrintDto.setIndex(8);
+				fingerPrintDto.setImage(getBiometrics(bestTwoFingerDtoFirst.getFingerPrint(), "Finger",bestTwoFingerDtoFirst.getFingersIndex()));
+				persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
+			}
 			}catch (Exception e) {
 				printLogger.info("Error in setTemplateAttributes");
 			}
@@ -327,13 +362,6 @@ try {
 }catch (Exception e) {
 	printLogger.info("Error in createTextFile");
 }
-		} catch (QrcodeGenerationException e) {
-			description.setMessage(PlatformErrorMessages.PRT_PRT_QR_CODE_GENERATION_ERROR.getMessage());
-			description.setCode(PlatformErrorMessages.PRT_PRT_QR_CODE_GENERATION_ERROR.getCode());
-			printLogger.error(PlatformErrorMessages.PRT_PRT_QRCODE_NOT_GENERATED.name(), e);
-			throw new PDFGeneratorException(PDFGeneratorExceptionCodeConstant.PDF_EXCEPTION.getErrorCode(),
-					e.getErrorText());
-
 		} catch (UINNotFoundInDatabase e) {
 			description.setMessage(PlatformErrorMessages.PRT_PRT_UIN_NOT_FOUND_IN_DATABASE.getMessage());
 			description.setCode(PlatformErrorMessages.PRT_PRT_UIN_NOT_FOUND_IN_DATABASE.getCode());
@@ -399,7 +427,15 @@ try {
 		}
 		printLogger.debug("PrintServiceImpl::getDocuments()::exit");
 
-		return byteMap;
+		return persoRequestDto;
+	}
+
+	private String getAttribute(Map<String, Object> attributes, String attr) {
+		Object obj=attributes.get(attr);
+		if(obj!=null) {
+			obj.toString();
+		}
+		return null;
 	}
 
 	/**
@@ -504,6 +540,25 @@ try {
 			}
 		}
 		return isPhotoSet;
+	}
+	
+	private String getBiometrics(String individualBio,String type,String subtype) throws Exception {
+		String value = individualBio;
+		String data=null;
+
+		if (value != null) {
+			CbeffToBiometricUtil util = new CbeffToBiometricUtil(cbeffutil);
+			List<String> subtypeList = new ArrayList<>();
+			if(subtype!=null) {
+				subtypeList.add(subtype);
+			}
+			byte[] photoByte = util.getImageBytes(value, type, subtypeList);
+			if (photoByte != null) {
+				 data = java.util.Base64.getEncoder().encodeToString(extractFaceImageData(photoByte));
+				
+			}
+		}
+		return data;
 	}
 
 	/**
