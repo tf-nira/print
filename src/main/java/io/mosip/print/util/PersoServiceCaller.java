@@ -72,7 +72,7 @@ public class PersoServiceCaller {
 			+ "}";	
 	public String callPersoService(PersoRequestDto request) {
 		logger.info("Calling perso service........");
-		request = getPersoRequest();
+		
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("ApiKey", apiKey);
 		headers.set("SecretKey", secretKey);
