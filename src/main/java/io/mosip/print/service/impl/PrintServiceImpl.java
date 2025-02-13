@@ -252,6 +252,7 @@ public class PrintServiceImpl implements PrintService{
 				String dataShareUrl = eventModel.getEvent().getDataShareUri();
 				URI dataShareUri = URI.create(dataShareUrl);
 				credential = restApiClient.getApi(dataShareUri, String.class);
+				printLogger.info("credential fomr datashare :" + credential);;
 			}
 			String ecryptionPin = eventModel.getEvent().getData().get("protectionKey").toString();
 			decodedCrdential = cryptoCoreUtil.decrypt(credential);
