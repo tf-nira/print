@@ -74,6 +74,7 @@ public class CryptoCoreUtil {
 			byte[] decryptedDataBytes = decryptData(dataBytes, privateKeyEntry);
 			return new String(decryptedDataBytes);
 		}catch (Exception e){
+			e.printStackTrace();
 			printLogger.error( "Not able to decrypt the data : {}", e);
 		}
 		throw new CryptoManagerException(PlatformErrorMessages.PRT_UNKNOWN_DECRYPTION_EXCEPTION.getCode(),
