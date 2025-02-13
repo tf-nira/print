@@ -319,8 +319,7 @@ public class PrintServiceImpl implements PrintService{
 			persoAddressDto.setSubCounty(getAttribute(attributes,"applicantPlaceOfResidenceSubCounty_eng"));
 			persoAddressDto.setParish(getAttribute(attributes,"applicantPlaceOfResidenceParish_eng"));
 			persoAddressDto.setVillage(getAttribute(attributes,"applicantPlaceOfResidenceVillage_eng"));
-			persoRequestDto.setAddress(persoAddressDto);
-			persoRequestDto.setNationality(decryptedJson.getString("NIN"));
+			persoRequestDto.setAddress(persoAddressDto);			
 			persoRequestDto.setDateOfIssuance(decryptedJson.getString("dateOfIssuance"));
 			persoRequestDto.setDateOfExpiry(decryptedJson.getString("dateOfExpiry"));
 			persoRequestDto.setNationality(decryptedJson.getString("Nationality"));
@@ -332,11 +331,11 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setExternalRequestId(requestId);
 			persoRequestDto.setCardNumber(decryptedJson.getString("NIN"));			
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
-			String faceCbeff = decryptedJson.getString("Face");	
+			String faceCbeff = decryptedJson.getString("Face");
 			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
 			String irisCbeff = decryptedJson.getString("Iris");	
-			persoBiometricsDto.setLeftIris(getBiometrics(faceCbeff, "IRIS", "Left"));
-			persoBiometricsDto.setRightIris(getBiometrics(faceCbeff, "IRIS", "Right"));
+			persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
+			persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Right"));
 			persoBiometricsDto.setSignature(decryptedJson.getString("signature"));
 			Object obj=decryptedJson.get("bestTwoFingers");
 			BestTwoFingerDto[] bestTwoFingerDtos = JsonUtil.mapJsonNodeToJavaObject(BestTwoFingerDto.class, (JSONArray) obj);
@@ -439,7 +438,7 @@ try {
 	private String getAttribute(Map<String, Object> attributes, String attr) {
 		Object obj=attributes.get(attr);
 		if(obj!=null) {
-			obj.toString();
+			return obj.toString();
 		}
 		return null;
 	}
