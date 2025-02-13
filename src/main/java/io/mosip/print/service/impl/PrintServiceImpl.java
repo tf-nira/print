@@ -320,23 +320,27 @@ public class PrintServiceImpl implements PrintService{
 			persoAddressDto.setParish(getAttribute(attributes,"applicantPlaceOfResidenceParish_eng"));
 			persoAddressDto.setVillage(getAttribute(attributes,"applicantPlaceOfResidenceVillage_eng"));
 			persoRequestDto.setAddress(persoAddressDto);			
-			persoRequestDto.setDateOfIssuance(decryptedJson.getString("dateOfIssuance"));
-			persoRequestDto.setDateOfExpiry(decryptedJson.getString("dateOfExpiry"));
-			persoRequestDto.setNationality(decryptedJson.getString("Nationality"));
+			persoRequestDto.setDateOfIssuance(
+					decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
+							: null);
+			persoRequestDto.setDateOfExpiry(
+					decryptedJson.get("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
+			persoRequestDto.setNationality(
+					decryptedJson.get("Nationality") != null ? decryptedJson.get("Nationality").toString() : null);
 			persoRequestDto.setGivenName(getAttribute(attributes,"givenName_eng"));
 			persoRequestDto.setOtherName(getAttribute(attributes,"otherNames_eng"));
 			persoRequestDto.setSurName(getAttribute(attributes,"surname_eng"));
 			persoRequestDto.setSexCode(getAttribute(attributes,"gender_eng"));
-			persoRequestDto.setDateOfBirth(decryptedJson.getString("dateOfBirth"));
-			persoRequestDto.setExternalRequestId(requestId);
-			persoRequestDto.setCardNumber(decryptedJson.getString("NIN"));			
+			persoRequestDto.setDateOfBirth(decryptedJson.get("dateOfBirth") !=null ? decryptedJson.get("dateOfBirth").toString() : null);
+			persoRequestDto.setExternalRequestId(requestId);			
+			persoRequestDto.setCardNumber(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);			
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
-			String faceCbeff = decryptedJson.getString("Face");
+			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
 			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
-			String irisCbeff = decryptedJson.getString("Iris");	
+			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;	
 			persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
 			persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Right"));
-			persoBiometricsDto.setSignature(decryptedJson.getString("signature"));
+			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
 			Object obj=decryptedJson.get("bestTwoFingers");
 			BestTwoFingerDto[] bestTwoFingerDtos = JsonUtil.mapJsonNodeToJavaObject(BestTwoFingerDto.class, (JSONArray) obj);
 			if(bestTwoFingerDtos[0]!=null) {
