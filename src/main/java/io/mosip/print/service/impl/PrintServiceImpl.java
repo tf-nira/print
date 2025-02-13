@@ -311,6 +311,7 @@ public class PrintServiceImpl implements PrintService{
 			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);			
 		
 			try {
+			printLogger.info("decryptedJson " + decryptedJson.toString());	
 			setTemplateAttributes(decryptedJson.toString(), attributes);
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
 			persoAddressDto.setCounty(getAttribute(attributes,"applicantPlaceOfResidenceCounty_eng"));
@@ -329,6 +330,7 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setSexCode(getAttribute(attributes,"gender_eng"));
 			persoRequestDto.setDateOfBirth(decryptedJson.getString("dateOfBirth"));
 			persoRequestDto.setExternalRequestId(requestId);
+			persoRequestDto.setCardNumber(decryptedJson.getString("NIN"));			
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = decryptedJson.getString("Face");	
 			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
@@ -352,9 +354,11 @@ public class PrintServiceImpl implements PrintService{
 				fingerPrintDto.setImage(getBiometrics(bestTwoFingerDtoFirst.getFingerPrint(), "Finger",bestTwoFingerDtoFirst.getFingersIndex()));
 				persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 			}
+				persoRequestDto.setBiometrics(persoBiometricsDto);
 			}catch (Exception e) {
 				printLogger.info("Error in setTemplateAttributes");
 			}
+			
 			attributes.put(IdType.UIN.toString(), uin);
 try {
 			String textFileString = createTextFile(decryptedJson.toString());
