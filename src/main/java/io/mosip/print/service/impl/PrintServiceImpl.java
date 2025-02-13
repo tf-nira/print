@@ -42,7 +42,9 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -332,7 +334,8 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setSurName(getAttribute(attributes,"surname_eng"));
 			persoRequestDto.setSexCode(getAttribute(attributes,"gender_eng"));
 			persoRequestDto.setDateOfBirth(decryptedJson.get("dateOfBirth") !=null ? decryptedJson.get("dateOfBirth").toString() : null);
-			persoRequestDto.setExternalRequestId(requestId);			
+			persoRequestDto.setExternalRequestId(requestId);
+			printLogger.info("NIN from decrypted String " + decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
 			persoRequestDto.setCardNumber(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);			
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
@@ -435,6 +438,12 @@ try {
 		}
 		printLogger.debug("PrintServiceImpl::getDocuments()::exit");
 
+		try {
+			printLogger.info("Object MApper PersoRequestDto " + new ObjectMapper().writeValueAsString(persoRequestDto));
+		} catch (JsonProcessingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		printLogger.info("persoRequestDto " + persoRequestDto.toString());
 		return persoRequestDto;
 	}
