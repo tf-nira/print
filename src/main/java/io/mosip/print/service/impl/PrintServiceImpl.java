@@ -233,7 +233,8 @@ public class PrintServiceImpl implements PrintService{
 	@Value("${mosip.template-language}")
 	private String templateLang;
 
-	@Value("#{'${mosip.mandatory-languages:}'.concat('${mosip.optional-languages:}')}")
+	
+	@Value("${mosip.mandatory-languages}")
 	private String supportedLang;
 	
 	@Autowired
