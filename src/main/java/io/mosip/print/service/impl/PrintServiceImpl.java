@@ -106,6 +106,7 @@ import io.mosip.print.service.UinCardGenerator;
 import io.mosip.print.spi.CbeffUtil;
 import io.mosip.print.spi.QrCodeGenerator;
 import io.mosip.print.util.AuditLogRequestBuilder;
+import io.mosip.print.util.BiometricExtractionUtil;
 import io.mosip.print.util.CbeffToBiometricUtil;
 import io.mosip.print.util.CryptoCoreUtil;
 import io.mosip.print.util.CryptoUtil;
@@ -332,11 +333,11 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setNin(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
-			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
+			persoBiometricsDto.setFaceImagePortrait(getFaceBiometrics(faceCbeff, "FACE", null));
 			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;
 			 printLogger.info("irisCbeff first " + irisCbeff);
-			persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
-			persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Left"));
+			//persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
+			//persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Left"));
 			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
 			if(decryptedJson.get("bestTwoFingers")!=null) {
 				String obj=decryptedJson.get("bestTwoFingers").toString();
@@ -347,20 +348,31 @@ public class PrintServiceImpl implements PrintService{
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
 		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
-		               printLogger.info("fingerPrint first " + fingerPrint);	
+		               
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(1);
-					fingerPrintDto.setImage(getBiometrics(fingerPrint, "Finger",fingersIndex));
+					byte[] fingerbyte=getBiometrics(fingerPrint, "Finger",fingersIndex);
+					if(fingerbyte!=null) {
+						String fingerprintImage=BiometricExtractionUtil.convertFingerIsoToImage(fingerbyte);
+						printLogger.info("Primary fingerprintImage"+fingerprintImage);
+						fingerPrintDto.setImage(fingerprintImage);
+					}
+					
 					persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 				}
 		    	 if(jsonArray.get(1)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
 		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
-		               printLogger.info("fingerPrint seconds " + fingerPrint);
+		              
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(8);
-					fingerPrintDto.setImage(getBiometrics(fingerPrint, "Finger",fingersIndex));
+					byte[] fingerbyte=getBiometrics(fingerPrint, "Finger",fingersIndex);
+					if(fingerbyte!=null) {
+						String fingerprintImage=BiometricExtractionUtil.convertFingerIsoToImage(fingerbyte);
+						printLogger.info("Secondary fingerprintImage"+fingerprintImage);
+						fingerPrintDto.setImage(fingerprintImage);
+					}
 					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
 			}
@@ -543,7 +555,7 @@ public class PrintServiceImpl implements PrintService{
 		return isPhotoSet;
 	}
 	
-	private String getBiometrics(String individualBio,String type,String subtype) throws Exception {
+	private String getFaceBiometrics(String individualBio,String type,String subtype) throws Exception {
 		String value = individualBio;
 		String data=null;
 
@@ -558,6 +570,20 @@ public class PrintServiceImpl implements PrintService{
 				 data = java.util.Base64.getEncoder().encodeToString(extractFaceImageData(photoByte));
 				
 			}
+		}
+		return data;
+	}
+	private byte[] getBiometrics(String individualBio,String type,String subtype) throws Exception {
+		String value = individualBio;
+		byte[] data=null;
+
+		if (value != null) {
+			CbeffToBiometricUtil util = new CbeffToBiometricUtil(cbeffutil);
+			List<String> subtypeList = new ArrayList<>();
+			if(subtype!=null) {
+				subtypeList.add(subtype);
+			}
+			data = util.getImageBytes(value, type, subtypeList);
 		}
 		return data;
 	}

@@ -245,6 +245,27 @@
 			<artifactId>jackson-datatype-jsr310</artifactId>
 			<version>2.12.0</version>
 		</dependency>
+		<dependency>
+			<groupId>io.mosip.imagedecoder</groupId>
+			<artifactId>imagedecoder</artifactId>
+			<version>0.9.0</version><exclusions>
+				<exclusion>
+					<groupId>io.mosip.kernel</groupId>
+					<artifactId>kernel-core</artifactId>
+				</exclusion>
+			</exclusions>
+    </dependency>
+		<dependency>
+    <groupId>io.mosip.biometric.util</groupId>
+    <artifactId>biometrics-util</artifactId>
+    <version>1.2.0.2</version>
+    <exclusions>
+    	<exclusion>
+    		<groupId>com.fasterxml.jackson.dataformat</groupId>
+    		<artifactId>jackson-dataformat-xml</artifactId>
+    	</exclusion>
+    </exclusions>
+		</dependency>
 	<!---	<dependency>
 			<groupId>io.mosip.vercred</groupId>
 			<artifactId>vcverifier</artifactId>
