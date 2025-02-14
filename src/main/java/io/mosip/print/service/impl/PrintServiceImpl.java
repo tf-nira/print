@@ -337,8 +337,8 @@ public class PrintServiceImpl implements PrintService{
 			persoBiometricsDto.setFaceImagePortrait(getFaceBiometrics(faceCbeff, "FACE", null));
 			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;
 
-			persoBiometricsDto.setLeftIris(getIrisBiometrics(irisCbeff, "Left"));
-			persoBiometricsDto.setRightIris(getIrisBiometrics(irisCbeff, "Right"));
+			// persoBiometricsDto.setLeftIris(getIrisBiometrics(irisCbeff, "Left"));
+			// persoBiometricsDto.setRightIris(getIrisBiometrics(irisCbeff, "Right"));
 			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
 			if(decryptedJson.get("bestTwoFingers")!=null) {
 				String obj=decryptedJson.get("bestTwoFingers").toString();
