@@ -314,7 +314,7 @@ public class PrintServiceImpl implements PrintService{
 			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);			
 
 			printLogger.info("decryptedJson " + decryptedJson.toString());	
-			setTemplateAttributes(decryptedJson.toString(), attributes);
+			
 			printLogger.info("attributes from set template " +attributes.toString());	
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
 			persoAddressDto.setCounty(getAttribute(attributes,"applicantPlaceOfResidenceCounty_eng"));
@@ -363,8 +363,8 @@ public class PrintServiceImpl implements PrintService{
 			}
 				persoRequestDto.setBiometrics(persoBiometricsDto);
 				
+				setTemplateAttributes(decryptedJson.toString(), attributes);
 			
-			attributes.put(IdType.UIN.toString(), uin);
 
 			isTransactionSuccessful = true;
 
@@ -585,6 +585,8 @@ public class PrintServiceImpl implements PrintService{
 					if (obj instanceof JSONArray) {
 						// JSONArray node = JsonUtil.getJSONArray(demographicIdentity, value);
 						JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, (JSONArray) obj);
+						printLogger.error("supportedLang ++++++++++" ,supportedLang);
+						printLogger.error("jsonValues ++++++++++" ,jsonValues.toString());
 						for (JsonValue jsonValue : jsonValues) {
 							/*
 							 * if (jsonValue.getLanguage().equals(primaryLang)) attribute.put(value + "_" +
