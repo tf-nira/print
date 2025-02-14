@@ -234,8 +234,8 @@ public class PrintServiceImpl implements PrintService{
 	private String templateLang;
 
 	
-	@Value("${mosip.mandatory-languages}")
-	private String supportedLang;
+
+	private String supportedLang="eng";
 	
 	@Autowired
 	private PersoServiceCaller serviceCaller;
@@ -593,10 +593,9 @@ public class PrintServiceImpl implements PrintService{
 					if (obj instanceof JSONArray) {
 						// JSONArray node = JsonUtil.getJSONArray(demographicIdentity, value);
 						JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, (JSONArray) obj);
-						
-						printLogger.error("jsonValues ++++++++++" ,jsonValues.toString());
+						printLogger.error("JSONArray obj++++++++++" ,obj);
+						printLogger.error("jsonValues ++++++++++" ,jsonValues);
 						supportedLang="eng";
-						printLogger.error("supportedLang ++++++++++" ,supportedLang);
 						for (JsonValue jsonValue : jsonValues) {
 							
 							if (supportedLang.contains(jsonValue.getLanguage()))
