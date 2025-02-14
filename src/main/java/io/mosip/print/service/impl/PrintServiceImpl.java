@@ -103,6 +103,7 @@ import io.mosip.print.service.UinCardGenerator;
 import io.mosip.print.spi.CbeffUtil;
 import io.mosip.print.spi.QrCodeGenerator;
 import io.mosip.print.util.AuditLogRequestBuilder;
+import io.mosip.print.util.BiometricExtractionUtil;
 import io.mosip.print.util.CbeffToBiometricUtil;
 import io.mosip.print.util.CryptoCoreUtil;
 import io.mosip.print.util.CryptoUtil;
@@ -309,7 +310,12 @@ public class PrintServiceImpl implements PrintService{
 			
 			printLogger.info("attributes from set template " +attributes.toString());	
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
-			
+			persoAddressDto.setCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceCounty"));
+			persoAddressDto.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfResidenceDistrict"));
+			persoAddressDto.setSubCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceSubCounty"));
+			persoAddressDto.setParish(getAttribute(decryptedJson, "applicantPlaceOfResidenceParish"));
+			persoAddressDto.setVillage(getAttribute(decryptedJson, "applicantPlaceOfResidenceVillage"));
+			persoRequestDto.setAddress(persoAddressDto);
 			persoRequestDto.setDateOfIssuance(
 					decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
 							: null);
@@ -330,9 +336,9 @@ public class PrintServiceImpl implements PrintService{
 			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
 			persoBiometricsDto.setFaceImagePortrait(getFaceBiometrics(faceCbeff, "FACE", null));
 			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;
-			 printLogger.info("irisCbeff first " + irisCbeff);
-			//persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
-			//persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Left"));
+
+			persoBiometricsDto.setLeftIris(getIrisBiometrics(irisCbeff, "Left"));
+			persoBiometricsDto.setRightIris(getIrisBiometrics(irisCbeff, "Right"));
 			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
 			if(decryptedJson.get("bestTwoFingers")!=null) {
 				String obj=decryptedJson.get("bestTwoFingers").toString();
@@ -346,7 +352,6 @@ public class PrintServiceImpl implements PrintService{
 		               String rawFinger=getFingerBiometrics(fingerPrint);
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(1);
-					printLogger.info("Primary fingerprintImage" + rawFinger);
 					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 				}
@@ -357,21 +362,12 @@ public class PrintServiceImpl implements PrintService{
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(8);
 					String rawFinger=getFingerBiometrics(fingerPrint);
-					printLogger.info("Secondary fingerprintImage" + rawFinger);
 					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
 			}
 			
 				persoRequestDto.setBiometrics(persoBiometricsDto);
-				persoAddressDto.setCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceCounty"));
-				persoAddressDto.setDistrict(getAttribute(decryptedJson,"applicantPlaceOfResidenceDistrict"));
-				persoAddressDto.setSubCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceSubCounty"));
-				persoAddressDto.setParish(getAttribute(decryptedJson,"applicantPlaceOfResidenceParish"));
-				persoAddressDto.setVillage(getAttribute(decryptedJson,"applicantPlaceOfResidenceVillage"));
-				persoRequestDto.setAddress(persoAddressDto);			
-				//setTemplateAttributes(decryptedJson.toString(), attributes);
-			
 
 			isTransactionSuccessful = true;
 
@@ -565,6 +561,17 @@ public class PrintServiceImpl implements PrintService{
 		for (Entry<String, String> iterable_element : bdbBasedOnFinger.entrySet()) {
 			byte[] fingerData=convertToJPG(iterable_element.getValue(), false);
 			 data = java.util.Base64.getEncoder().encodeToString(fingerData);
+		}
+		return data;
+	}
+
+	private String getIrisBiometrics(String individualBio, String subType) throws Exception {
+		String data = null;
+		Map<String, String> bdbBasedOnIris = cbeffutil.getBDBBasedOnType(Base64.decodeBase64(individualBio), "Iris",
+				subType);
+		for (Entry<String, String> iterable_element : bdbBasedOnIris.entrySet()) {
+			byte[] inputFileBytes = Base64.decodeBase64(iterable_element.getValue());
+			data = BiometricExtractionUtil.convertIrisIsoToImage(inputFileBytes);
 		}
 		return data;
 	}
