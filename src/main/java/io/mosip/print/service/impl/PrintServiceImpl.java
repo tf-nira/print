@@ -1,10 +1,14 @@
 package io.mosip.print.service.impl;
 
+import java.awt.AlphaComposite;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -20,13 +24,14 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.annotation.PostConstruct;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReadParam;
 
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
@@ -45,6 +50,7 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.jaiimageio.jpeg2000.impl.J2KImageReader;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -53,20 +59,15 @@ import io.mosip.print.constant.ApiName;
 import io.mosip.print.constant.EventId;
 import io.mosip.print.constant.EventName;
 import io.mosip.print.constant.EventType;
-import io.mosip.print.constant.IdType;
-import io.mosip.print.constant.LoggerFileConstant;
 import io.mosip.print.constant.ModuleName;
 import io.mosip.print.constant.PDFGeneratorExceptionCodeConstant;
 import io.mosip.print.constant.PlatformSuccessMessages;
 import io.mosip.print.constant.QrVersion;
-import io.mosip.print.constant.UinCardType;
 import io.mosip.print.core.http.RequestWrapper;
-import io.mosip.print.dto.BestTwoFingerDto;
 import io.mosip.print.dto.CardNumberUpdateDto;
 import io.mosip.print.dto.CardUpdateRequestDto;
 import io.mosip.print.dto.CryptoWithPinRequestDto;
 import io.mosip.print.dto.CryptoWithPinResponseDto;
-import io.mosip.print.dto.DataShare;
 import io.mosip.print.dto.ErrorDTO;
 import io.mosip.print.dto.EventData;
 import io.mosip.print.dto.EventDetails;
@@ -87,14 +88,10 @@ import io.mosip.print.exception.ExceptionUtils;
 import io.mosip.print.exception.IdRepoAppException;
 import io.mosip.print.exception.IdentityNotFoundException;
 import io.mosip.print.exception.PDFGeneratorException;
-import io.mosip.print.exception.PDFSignatureException;
 import io.mosip.print.exception.ParsingException;
 import io.mosip.print.exception.PlatformErrorMessages;
 import io.mosip.print.exception.QrcodeGenerationException;
-import io.mosip.print.exception.TemplateProcessingFailureException;
-import io.mosip.print.exception.UINNotFoundInDatabase;
 import io.mosip.print.exception.VidCreationException;
-import io.mosip.print.idrepo.dto.IdResponseDTO1;
 import io.mosip.print.logger.LogDescription;
 import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.model.CredentialStatusEvent;
@@ -106,13 +103,11 @@ import io.mosip.print.service.UinCardGenerator;
 import io.mosip.print.spi.CbeffUtil;
 import io.mosip.print.spi.QrCodeGenerator;
 import io.mosip.print.util.AuditLogRequestBuilder;
-import io.mosip.print.util.BiometricExtractionUtil;
 import io.mosip.print.util.CbeffToBiometricUtil;
 import io.mosip.print.util.CryptoCoreUtil;
 import io.mosip.print.util.CryptoUtil;
 import io.mosip.print.util.DataShareUtil;
 import io.mosip.print.util.DateUtils;
-import io.mosip.print.util.DigitalSignatureUtility;
 import io.mosip.print.util.JsonUtil;
 import io.mosip.print.util.PersoServiceCaller;
 import io.mosip.print.util.RestApiClient;
@@ -348,31 +343,22 @@ public class PrintServiceImpl implements PrintService{
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
 		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
-		               
+		               String rawFinger=getFingerBiometrics(fingerPrint);
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(1);
-					byte[] fingerbyte=getBiometrics(fingerPrint, "Finger",fingersIndex);
-					if(fingerbyte!=null) {
-						String fingerprintImage=BiometricExtractionUtil.convertFingerIsoToImage(fingerbyte);
-						printLogger.info("Primary fingerprintImage"+fingerprintImage);
-						fingerPrintDto.setImage(fingerprintImage);
-					}
-					
+					printLogger.info("Primary fingerprintImage" + rawFinger);
+					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 				}
 		    	 if(jsonArray.get(1)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
-		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
-		               String fingerPrint = (String) jsonObject.get("fingerPrint");
-		              
+						String fingersIndex = (String) jsonObject.get("fingersIndex");
+						String fingerPrint = (String) jsonObject.get("fingerPrint");
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(8);
-					byte[] fingerbyte=getBiometrics(fingerPrint, "Finger",fingersIndex);
-					if(fingerbyte!=null) {
-						String fingerprintImage=BiometricExtractionUtil.convertFingerIsoToImage(fingerbyte);
-						printLogger.info("Secondary fingerprintImage"+fingerprintImage);
-						fingerPrintDto.setImage(fingerprintImage);
-					}
+					String rawFinger=getFingerBiometrics(fingerPrint);
+					printLogger.info("Secondary fingerprintImage" + rawFinger);
+					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
 			}
@@ -573,17 +559,12 @@ public class PrintServiceImpl implements PrintService{
 		}
 		return data;
 	}
-	private byte[] getBiometrics(String individualBio,String type,String subtype) throws Exception {
-		String value = individualBio;
-		byte[] data=null;
-
-		if (value != null) {
-			CbeffToBiometricUtil util = new CbeffToBiometricUtil(cbeffutil);
-			List<String> subtypeList = new ArrayList<>();
-			if(subtype!=null) {
-				subtypeList.add(subtype);
-			}
-			data = util.getImageBytes(value, type, subtypeList);
+	private String getFingerBiometrics(String individualBio) throws Exception {
+		String data=null;
+		Map<String, String> bdbBasedOnFinger =  cbeffutil.getBDBBasedOnType(Base64.decodeBase64(individualBio), "Finger", null);
+		for (Entry<String, String> iterable_element : bdbBasedOnFinger.entrySet()) {
+			byte[] fingerData=convertToJPG(iterable_element.getValue(), false);
+			 data = java.util.Base64.getEncoder().encodeToString(fingerData);
 		}
 		return data;
 	}
@@ -965,4 +946,53 @@ public class PrintServiceImpl implements PrintService{
 		data.setEvent(eventData);
 		webSubSubscriptionHelper.cardNumberPublishEvent(topic, data);
 	}
+	private byte[] convertToJPG(String isoTemplate, boolean isUpscaleRequired) {
+		byte[] inputFileBytes = Base64.decodeBase64(isoTemplate);
+		int index;
+		for (index = 0; index < inputFileBytes.length; index++) {
+			if ((char) inputFileBytes[index] == 'j' && (char) inputFileBytes[index + 1] == 'P') {
+				break;
+			}
+		}
+		try {
+			return convertToJPG(Arrays.copyOfRange(inputFileBytes, index - 4, inputFileBytes.length), "image",
+					isUpscaleRequired);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
+	}
+	private byte[] convertToJPG(byte[] jp2Data, String fileName, boolean isUpscaleRequired) throws IOException {
+		ByteArrayOutputStream beforeUpScale = new ByteArrayOutputStream();
+		ByteArrayOutputStream afterUpScale = new ByteArrayOutputStream();
+		J2KImageReader j2kImageReader = new J2KImageReader(null);
+		j2kImageReader.setInput(ImageIO.createImageInputStream(new ByteArrayInputStream(jp2Data)));
+		ImageReadParam imageReadParam = j2kImageReader.getDefaultReadParam();
+		BufferedImage image = j2kImageReader.read(0, imageReadParam);
+		ImageIO.write(image, "PNG", beforeUpScale);
+		if (!isUpscaleRequired) {
+			return beforeUpScale.toByteArray();
+		}
+		int height = image.getHeight();
+		int width = image.getWidth();
+		BufferedImage outputImage = createResizedCopy(image, 2 * width, 2 * height, true);
+		ImageIO.write(outputImage, "PNG", afterUpScale);
+		byte[] jpgImg = afterUpScale.toByteArray();
+		return jpgImg;
+	}
+	private BufferedImage createResizedCopy(Image originalImage, int scaledWidth, int scaledHeight,
+			boolean preserveAlpha) {
+		System.out.println("resizing...");
+		int imageType = preserveAlpha ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
+		BufferedImage scaledBI = new BufferedImage(scaledWidth, scaledHeight, imageType);
+		Graphics2D g = scaledBI.createGraphics();
+		if (preserveAlpha) {
+			g.setComposite(AlphaComposite.Src);
+		}
+		g.drawImage(originalImage, 0, 0, scaledWidth, scaledHeight, null);
+		g.dispose();
+		return scaledBI;
+	}
+
 }

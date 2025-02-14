@@ -98,6 +98,7 @@ public class CbeffToBiometricUtil {
 				boolean isSubType = isSubType(subType, subTypeList);
 
 				if (isType && isSubType) {
+					printLogger.info("type is present"+type);
 					photoBytes = bir.getBdb();
 					break;
 				}
