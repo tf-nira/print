@@ -313,12 +313,7 @@ public class PrintServiceImpl implements PrintService{
 			
 			printLogger.info("attributes from set template " +attributes.toString());	
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
-			persoAddressDto.setCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceCounty"));
-			persoAddressDto.setDistrict(getAttribute(decryptedJson,"applicantPlaceOfResidenceDistrict"));
-			persoAddressDto.setSubCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceSubCounty"));
-			persoAddressDto.setParish(getAttribute(decryptedJson,"applicantPlaceOfResidenceParish"));
-			persoAddressDto.setVillage(getAttribute(decryptedJson,"applicantPlaceOfResidenceVillage"));
-			persoRequestDto.setAddress(persoAddressDto);			
+			
 			persoRequestDto.setDateOfIssuance(
 					decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
 							: null);
@@ -371,7 +366,12 @@ public class PrintServiceImpl implements PrintService{
 			}
 			
 				persoRequestDto.setBiometrics(persoBiometricsDto);
-				
+				persoAddressDto.setCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceCounty"));
+				persoAddressDto.setDistrict(getAttribute(decryptedJson,"applicantPlaceOfResidenceDistrict"));
+				persoAddressDto.setSubCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceSubCounty"));
+				persoAddressDto.setParish(getAttribute(decryptedJson,"applicantPlaceOfResidenceParish"));
+				persoAddressDto.setVillage(getAttribute(decryptedJson,"applicantPlaceOfResidenceVillage"));
+				persoRequestDto.setAddress(persoAddressDto);			
 				//setTemplateAttributes(decryptedJson.toString(), attributes);
 			
 
@@ -424,6 +424,7 @@ public class PrintServiceImpl implements PrintService{
 	}
 
 	private String getAttribute(org.json.JSONObject  json, String attr) throws ParseException {
+		if (json.has(attr)) {
 		Object obj=json.get(attr);
 		if(obj!=null) {
 		JSONParser parser = new JSONParser();
@@ -432,8 +433,9 @@ public class PrintServiceImpl implements PrintService{
    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
    		  return  (String) jsonObject.get("value");
 		
-		}
+		  }
     	 }
+		}
 		return null;
 	}
 
