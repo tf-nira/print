@@ -237,8 +237,7 @@ public class PrintServiceImpl implements PrintService{
 	private PersoServiceCaller serviceCaller;
 
 	
-	public boolean generateCard(EventModel eventModel) {
-		
+	public boolean generateCard(EventModel eventModel) {	
 
 		String decodedCrdential = null;
 		String credential = null;
@@ -326,10 +325,12 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setGivenName(getAttribute(decryptedJson,"givenName"));
 			persoRequestDto.setOtherName(getAttribute(decryptedJson,"otherNames"));
 			persoRequestDto.setSurName(getAttribute(decryptedJson,"surname"));
-			persoRequestDto.setSexCode(getAttribute(decryptedJson,"gender"));
+			persoRequestDto.setSexCode(getAttribute(decryptedJson, "gender").equalsIgnoreCase("Male") ? "M" : "F");
 			persoRequestDto.setDateOfBirth(decryptedJson.get("dateOfBirth") !=null ? decryptedJson.get("dateOfBirth").toString() : null);
 			persoRequestDto.setExternalRequestId(requestId);
-			printLogger.info("NIN from decrypted String " + decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
+			persoRequestDto.setTransactionId(requestId);
+			persoRequestDto.setNationalityCode("UGA");
+			persoRequestDto.setIssuingCountryCode("UGA");
 			persoRequestDto.setCardNumber(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
 			persoRequestDto.setNin(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
@@ -435,7 +436,7 @@ public class PrintServiceImpl implements PrintService{
 		  }
     	 }
 		}
-		return null;
+		return "";
 	}
 
 	/**
