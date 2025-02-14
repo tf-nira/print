@@ -424,10 +424,10 @@ public class PrintServiceImpl implements PrintService{
 	}
 
 	private String getAttribute(org.json.JSONObject  json, String attr) throws ParseException {
-		String obj=json.get(attr).toString();
+		Object obj=json.get(attr);
 		if(obj!=null) {
 		JSONParser parser = new JSONParser();
-    	JSONArray jsonArray = (JSONArray) parser.parse(obj);
+    	JSONArray jsonArray = (JSONArray) parser.parse(obj.toString());
     	if(jsonArray.get(0)!=null) {
    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
    		  return  (String) jsonObject.get("value");
