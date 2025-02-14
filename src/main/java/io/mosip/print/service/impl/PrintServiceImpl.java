@@ -603,7 +603,7 @@ public class PrintServiceImpl implements PrintService{
 						JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, (JSONArray) obj);
 						printLogger.error("JSONArray obj++++++++++" ,obj);
 						printLogger.error("jsonValues ++++++++++" ,jsonValues);
-						supportedLang="eng";
+						
 						for (JsonValue jsonValue : jsonValues) {
 							
 							if (supportedLang.contains(jsonValue.getLanguage()))
