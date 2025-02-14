@@ -23,7 +23,7 @@ public class BiometricExtractionUtil {
 		req.setInputBytes(isoBytes);
 		req.setImageType(0);
 		req.setPurpose("REGISTRATION");
-		req.setVersion("ISO19794_4_2011");
+		req.setVersion("ISO19794_6_2011");
 		IrisBDIR irisBDIR = getIrisBDIRISO19794_6_2011(req.getInputBytes(), req.getOnlyImageInformation());
 		byte[] isoData = irisBDIR.getRepresentation().getRepresentationData().getImageData().getImage();
 		DecoderRequestInfo requestInfo = new DecoderRequestInfo();
