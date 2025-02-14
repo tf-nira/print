@@ -298,17 +298,14 @@ public class PrintServiceImpl implements PrintService{
 		printLogger.debug("PrintServiceImpl::getDocuments()::entry");
 		PersoRequestDto persoRequestDto=new PersoRequestDto();
 		String credentialSubject;
-		Map<String, byte[]> byteMap = new HashMap<>();
+
 		String uin = null;
 		LogDescription description = new LogDescription();
-		String vid = null;
-		String password = null;
-		String individualBio = null;
+
 		Map<String, Object> attributes = new LinkedHashMap<>();
 		boolean isTransactionSuccessful = false;
-		IdResponseDTO1 response = null;
-		String template = UIN_CARD_TEMPLATE;
-		byte[] pdfbytes = null;
+
+
 		try {
 			credentialSubject = getCrdentialSubject(credential);
 			org.json.JSONObject credentialSubjectJson = new org.json.JSONObject(credentialSubject);
@@ -324,11 +321,11 @@ public class PrintServiceImpl implements PrintService{
 			persoAddressDto.setParish(getAttribute(attributes,"applicantPlaceOfResidenceParish_eng"));
 			persoAddressDto.setVillage(getAttribute(attributes,"applicantPlaceOfResidenceVillage_eng"));
 			persoRequestDto.setAddress(persoAddressDto);			
-			//persoRequestDto.setDateOfIssuance(
-				//	decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
-				//			: null);
-			//persoRequestDto.setDateOfExpiry(
-				//	decryptedJson.optJSONObject("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
+			persoRequestDto.setDateOfIssuance(
+					decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
+							: null);
+			persoRequestDto.setDateOfExpiry(
+					decryptedJson.optJSONObject("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
 			persoRequestDto.setNationality(
 					decryptedJson.get("Nationality") != null ? decryptedJson.get("Nationality").toString() : null);
 			persoRequestDto.setGivenName(getAttribute(attributes,"givenName_eng"));
@@ -338,30 +335,40 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setDateOfBirth(decryptedJson.get("dateOfBirth") !=null ? decryptedJson.get("dateOfBirth").toString() : null);
 			persoRequestDto.setExternalRequestId(requestId);
 			printLogger.info("NIN from decrypted String " + decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
-			persoRequestDto.setCardNumber(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);			
+			persoRequestDto.setCardNumber(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
+			persoRequestDto.setNin(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
 			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
 			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;	
 			persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
-			//persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Right"));
+			persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Left"));
 			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
-			Object obj=decryptedJson.get("bestTwoFingers");
-			BestTwoFingerDto[] bestTwoFingerDtos = JsonUtil.mapJsonNodeToJavaObject(BestTwoFingerDto.class, (JSONArray) obj);
-			if(bestTwoFingerDtos[0]!=null) {
-				BestTwoFingerDto bestTwoFingerDtoFirst = bestTwoFingerDtos[0];
-				FingerPrintDto fingerPrintDto=new FingerPrintDto();
-				fingerPrintDto.setIndex(1);
-				fingerPrintDto.setImage(getBiometrics(bestTwoFingerDtoFirst.getFingerPrint(), "Finger",bestTwoFingerDtoFirst.getFingersIndex()));
-				persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
+			if(decryptedJson.get("bestTwoFingers")!=null) {
+				String obj=decryptedJson.get("bestTwoFingers").toString();
+				JSONParser parser = new JSONParser();
+		    	JSONArray jsonArray = (JSONArray) parser.parse(obj);
+			
+		    	 if(jsonArray.get(0)!=null) {
+		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
+		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
+		               String fingerPrint = (String) jsonObject.get("fingerPrint");
+					FingerPrintDto fingerPrintDto=new FingerPrintDto();
+					fingerPrintDto.setIndex(1);
+					fingerPrintDto.setImage(getBiometrics(fingerPrint, "Finger",fingersIndex));
+					persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
+				}
+		    	 if(jsonArray.get(1)!=null) {
+		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
+		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
+		               String fingerPrint = (String) jsonObject.get("fingerPrint");
+					FingerPrintDto fingerPrintDto=new FingerPrintDto();
+					fingerPrintDto.setIndex(8);
+					fingerPrintDto.setImage(getBiometrics(fingerPrint, "Finger",fingersIndex));
+					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
+				}
 			}
-			if(bestTwoFingerDtos[1]!=null) {
-				BestTwoFingerDto bestTwoFingerDtoFirst = bestTwoFingerDtos[1];
-				FingerPrintDto fingerPrintDto=new FingerPrintDto();
-				fingerPrintDto.setIndex(8);
-				fingerPrintDto.setImage(getBiometrics(bestTwoFingerDtoFirst.getFingerPrint(), "Finger",bestTwoFingerDtoFirst.getFingersIndex()));
-				persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
-			}
+			
 				persoRequestDto.setBiometrics(persoBiometricsDto);
 				
 				setTemplateAttributes(decryptedJson.toString(), attributes);
@@ -586,15 +593,12 @@ public class PrintServiceImpl implements PrintService{
 					if (obj instanceof JSONArray) {
 						// JSONArray node = JsonUtil.getJSONArray(demographicIdentity, value);
 						JsonValue[] jsonValues = JsonUtil.mapJsonNodeToJavaObject(JsonValue.class, (JSONArray) obj);
-						printLogger.error("supportedLang ++++++++++" ,supportedLang);
+						
 						printLogger.error("jsonValues ++++++++++" ,jsonValues.toString());
+						supportedLang="eng";
+						printLogger.error("supportedLang ++++++++++" ,supportedLang);
 						for (JsonValue jsonValue : jsonValues) {
-							/*
-							 * if (jsonValue.getLanguage().equals(primaryLang)) attribute.put(value + "_" +
-							 * primaryLang, jsonValue.getValue()); if
-							 * (jsonValue.getLanguage().equals(secondaryLang)) attribute.put(value + "_" +
-							 * secondaryLang, jsonValue.getValue());
-							 */
+							
 							if (supportedLang.contains(jsonValue.getLanguage()))
 								attribute.put(value + "_" + jsonValue.getLanguage(), jsonValue.getValue());
 
