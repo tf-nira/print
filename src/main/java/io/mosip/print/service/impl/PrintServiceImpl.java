@@ -311,10 +311,10 @@ public class PrintServiceImpl implements PrintService{
 			credentialSubject = getCrdentialSubject(credential);
 			org.json.JSONObject credentialSubjectJson = new org.json.JSONObject(credentialSubject);
 			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);			
-		
-			try {
+
 			printLogger.info("decryptedJson " + decryptedJson.toString());	
 			setTemplateAttributes(decryptedJson.toString(), attributes);
+			printLogger.info("attributes from set template " +attributes.toString());	
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
 			persoAddressDto.setCounty(getAttribute(attributes,"applicantPlaceOfResidenceCounty_eng"));
 			persoAddressDto.setDistrict(getAttribute(attributes,"applicantPlaceOfResidenceDistrict_eng"));
@@ -361,49 +361,13 @@ public class PrintServiceImpl implements PrintService{
 				persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 			}
 				persoRequestDto.setBiometrics(persoBiometricsDto);
-			}catch (Exception e) {
-				printLogger.info("Error in setTemplateAttributes");
-			}
+				
 			
 			attributes.put(IdType.UIN.toString(), uin);
-try {
-			String textFileString = createTextFile(decryptedJson.toString());
-			printLogger.info("Decrypted print attributes: " + textFileString);
+
 			isTransactionSuccessful = true;
-}catch (Exception e) {
-	printLogger.info("Error in createTextFile");
-}
-		} catch (UINNotFoundInDatabase e) {
-			description.setMessage(PlatformErrorMessages.PRT_PRT_UIN_NOT_FOUND_IN_DATABASE.getMessage());
-			description.setCode(PlatformErrorMessages.PRT_PRT_UIN_NOT_FOUND_IN_DATABASE.getCode());
 
-			printLogger.error(PlatformErrorMessages.PRT_PRT_UIN_NOT_FOUND_IN_DATABASE.name(), e);
-			throw new PDFGeneratorException(PDFGeneratorExceptionCodeConstant.PDF_EXCEPTION.getErrorCode(),
-					e.getErrorText());
-
-		} catch (TemplateProcessingFailureException e) {
-			description.setMessage(PlatformErrorMessages.PRT_TEM_PROCESSING_FAILURE.getMessage());
-			description.setCode(PlatformErrorMessages.PRT_TEM_PROCESSING_FAILURE.getCode());
-
-			printLogger.error(PlatformErrorMessages.PRT_TEM_PROCESSING_FAILURE.name(), e);
-			throw new TemplateProcessingFailureException(PlatformErrorMessages.PRT_TEM_PROCESSING_FAILURE.getMessage());
-
-		} catch (PDFGeneratorException e) {
-			description.setMessage(PlatformErrorMessages.PRT_PRT_PDF_NOT_GENERATED.getMessage());
-			description.setCode(PlatformErrorMessages.PRT_PRT_PDF_NOT_GENERATED.getCode());
-
-			printLogger.error(PlatformErrorMessages.PRT_PRT_PDF_NOT_GENERATED.name(), e);
-			throw new PDFGeneratorException(PDFGeneratorExceptionCodeConstant.PDF_EXCEPTION.getErrorCode(),
-					e.getErrorText());
-
-		} catch (PDFSignatureException e) {
-			description.setMessage(PlatformErrorMessages.PRT_PRT_PDF_SIGNATURE_EXCEPTION.getMessage());
-			description.setCode(PlatformErrorMessages.PRT_PRT_PDF_SIGNATURE_EXCEPTION.getCode());
-
-			printLogger.error(PlatformErrorMessages.PRT_PRT_PDF_SIGNATURE_EXCEPTION.name(), e);
-			throw new PDFSignatureException(PlatformErrorMessages.PRT_PRT_PDF_SIGNATURE_EXCEPTION.getMessage());
-
-		} catch (Exception ex) {
+		}  catch (Exception ex) {
 			description.setMessage(PlatformErrorMessages.PRT_PRT_PDF_GENERATION_FAILED.getMessage());
 			description.setCode(PlatformErrorMessages.PRT_PRT_PDF_GENERATION_FAILED.getCode());
 			printLogger.error(ex.getMessage(), ex);
@@ -411,6 +375,13 @@ try {
 					ex.getMessage(), ex);
 
 		} finally {
+			try {
+				printLogger.info("Object MApper PersoRequestDto in finally  " + new ObjectMapper().writeValueAsString(persoRequestDto));
+			} catch (JsonProcessingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
 			String eventId = "";
 			String eventName = "";
 			String eventType = "";
@@ -438,13 +409,7 @@ try {
 		}
 		printLogger.debug("PrintServiceImpl::getDocuments()::exit");
 
-		try {
-			printLogger.info("Object MApper PersoRequestDto " + new ObjectMapper().writeValueAsString(persoRequestDto));
-		} catch (JsonProcessingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		printLogger.info("persoRequestDto " + persoRequestDto.toString());
+	
 		return persoRequestDto;
 	}
 
