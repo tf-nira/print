@@ -249,6 +249,7 @@ public class PrintServiceImpl implements PrintService{
 		String credential = null;
 		boolean isPrinted=false;
 		try {
+			printLogger.info("supportedLang ++++++++++" ,supportedLang);
 			if (eventModel.getEvent().getDataShareUri() == null || eventModel.getEvent().getDataShareUri().isEmpty()) {
 				credential = eventModel.getEvent().getData().get("credential").toString();
 			} else {
@@ -343,7 +344,7 @@ public class PrintServiceImpl implements PrintService{
 			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
 			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;	
 			persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
-			persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Right"));
+			//persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Right"));
 			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
 			Object obj=decryptedJson.get("bestTwoFingers");
 			BestTwoFingerDto[] bestTwoFingerDtos = JsonUtil.mapJsonNodeToJavaObject(BestTwoFingerDto.class, (JSONArray) obj);
