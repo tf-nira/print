@@ -243,14 +243,13 @@ public class PrintServiceImpl implements PrintService{
 		String credential = null;
 		boolean isPrinted=false;
 		try {
-			printLogger.info("supportedLang ++++++++++" ,supportedLang);
+			//printLogger.info("supportedLang ++++++++++" ,supportedLang);
 			if (eventModel.getEvent().getDataShareUri() == null || eventModel.getEvent().getDataShareUri().isEmpty()) {
 				credential = eventModel.getEvent().getData().get("credential").toString();
 			} else {
 				String dataShareUrl = eventModel.getEvent().getDataShareUri();
 				URI dataShareUri = URI.create(dataShareUrl);
 				credential = restApiClient.getApi(dataShareUri, String.class);
-				//printLogger.info("credential fomr datashare :" + credential);;
 			}
 			String ecryptionPin = eventModel.getEvent().getData().get("protectionKey").toString();
 			decodedCrdential = cryptoCoreUtil.decrypt(credential);
@@ -305,9 +304,9 @@ public class PrintServiceImpl implements PrintService{
 			org.json.JSONObject credentialSubjectJson = new org.json.JSONObject(credentialSubject);
 			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, credential);			
 
-			printLogger.info("decryptedJson " + decryptedJson.toString());	
+			//printLogger.info("decryptedJson " + decryptedJson.toString());	
 			
-			printLogger.info("attributes from set template " +attributes.toString());	
+			//printLogger.info("attributes from set template " +attributes.toString());	
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
 			persoAddressDto.setCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceCounty"));
 			persoAddressDto.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfResidenceDistrict"));
@@ -385,13 +384,13 @@ public class PrintServiceImpl implements PrintService{
 					ex.getMessage(), ex);
 
 		} finally {
-			try {
-				printLogger.info("Object MApper PersoRequestDto in finally  " + new ObjectMapper().writeValueAsString(persoRequestDto));
-			} catch (JsonProcessingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
+//			try {
+//				printLogger.info("Object MApper PersoRequestDto in finally  " + new ObjectMapper().writeValueAsString(persoRequestDto));
+//			} catch (JsonProcessingException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+			//printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
 			String eventId = "";
 			String eventName = "";
 			String eventType = "";
