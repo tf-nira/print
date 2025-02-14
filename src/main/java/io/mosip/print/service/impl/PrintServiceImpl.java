@@ -233,9 +233,8 @@ public class PrintServiceImpl implements PrintService{
 	@Value("${mosip.template-language}")
 	private String templateLang;
 
-	
+	private static final String supportedLang = "eng";
 
-	private String supportedLang="eng";
 	
 	@Autowired
 	private PersoServiceCaller serviceCaller;
@@ -243,8 +242,7 @@ public class PrintServiceImpl implements PrintService{
 	
 	public boolean generateCard(EventModel eventModel) {
 		
-		Map<String, byte[]> byteMap = new HashMap<>();
-		byte[] pdfbytes=null;
+
 		String decodedCrdential = null;
 		String credential = null;
 		boolean isPrinted=false;
@@ -315,23 +313,23 @@ public class PrintServiceImpl implements PrintService{
 			
 			printLogger.info("attributes from set template " +attributes.toString());	
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
-			persoAddressDto.setCounty(getAttribute(attributes,"applicantPlaceOfResidenceCounty_eng"));
-			persoAddressDto.setDistrict(getAttribute(attributes,"applicantPlaceOfResidenceDistrict_eng"));
-			persoAddressDto.setSubCounty(getAttribute(attributes,"applicantPlaceOfResidenceSubCounty_eng"));
-			persoAddressDto.setParish(getAttribute(attributes,"applicantPlaceOfResidenceParish_eng"));
-			persoAddressDto.setVillage(getAttribute(attributes,"applicantPlaceOfResidenceVillage_eng"));
+			persoAddressDto.setCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceCounty"));
+			persoAddressDto.setDistrict(getAttribute(decryptedJson,"applicantPlaceOfResidenceDistrict"));
+			persoAddressDto.setSubCounty(getAttribute(decryptedJson,"applicantPlaceOfResidenceSubCounty"));
+			persoAddressDto.setParish(getAttribute(decryptedJson,"applicantPlaceOfResidenceParish"));
+			persoAddressDto.setVillage(getAttribute(decryptedJson,"applicantPlaceOfResidenceVillage"));
 			persoRequestDto.setAddress(persoAddressDto);			
 			persoRequestDto.setDateOfIssuance(
 					decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
 							: null);
 			persoRequestDto.setDateOfExpiry(
-					decryptedJson.optJSONObject("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
+					decryptedJson.get("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
 			persoRequestDto.setNationality(
 					decryptedJson.get("Nationality") != null ? decryptedJson.get("Nationality").toString() : null);
-			persoRequestDto.setGivenName(getAttribute(attributes,"givenName_eng"));
-			persoRequestDto.setOtherName(getAttribute(attributes,"otherNames_eng"));
-			persoRequestDto.setSurName(getAttribute(attributes,"surname_eng"));
-			persoRequestDto.setSexCode(getAttribute(attributes,"gender_eng"));
+			persoRequestDto.setGivenName(getAttribute(decryptedJson,"givenName"));
+			persoRequestDto.setOtherName(getAttribute(decryptedJson,"otherNames"));
+			persoRequestDto.setSurName(getAttribute(decryptedJson,"surname"));
+			persoRequestDto.setSexCode(getAttribute(decryptedJson,"gender"));
 			persoRequestDto.setDateOfBirth(decryptedJson.get("dateOfBirth") !=null ? decryptedJson.get("dateOfBirth").toString() : null);
 			persoRequestDto.setExternalRequestId(requestId);
 			printLogger.info("NIN from decrypted String " + decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
@@ -340,7 +338,8 @@ public class PrintServiceImpl implements PrintService{
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
 			persoBiometricsDto.setFaceImagePortrait(getBiometrics(faceCbeff, "FACE", null));
-			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;	
+			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;
+			 printLogger.info("irisCbeff first " + irisCbeff);
 			persoBiometricsDto.setLeftIris(getBiometrics(irisCbeff, "IRIS", "Left"));
 			persoBiometricsDto.setRightIris(getBiometrics(irisCbeff, "IRIS", "Left"));
 			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
@@ -353,6 +352,7 @@ public class PrintServiceImpl implements PrintService{
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
 		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
+		               printLogger.info("fingerPrint first " + fingerPrint);	
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(1);
 					fingerPrintDto.setImage(getBiometrics(fingerPrint, "Finger",fingersIndex));
@@ -362,6 +362,7 @@ public class PrintServiceImpl implements PrintService{
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
 		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
+		               printLogger.info("fingerPrint seconds " + fingerPrint);
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(8);
 					fingerPrintDto.setImage(getBiometrics(fingerPrint, "Finger",fingersIndex));
@@ -371,7 +372,7 @@ public class PrintServiceImpl implements PrintService{
 			
 				persoRequestDto.setBiometrics(persoBiometricsDto);
 				
-				setTemplateAttributes(decryptedJson.toString(), attributes);
+				//setTemplateAttributes(decryptedJson.toString(), attributes);
 			
 
 			isTransactionSuccessful = true;
@@ -422,11 +423,17 @@ public class PrintServiceImpl implements PrintService{
 		return persoRequestDto;
 	}
 
-	private String getAttribute(Map<String, Object> attributes, String attr) {
-		Object obj=attributes.get(attr);
+	private String getAttribute(org.json.JSONObject  json, String attr) throws ParseException {
+		String obj=json.get(attr).toString();
 		if(obj!=null) {
-			return obj.toString();
+		JSONParser parser = new JSONParser();
+    	JSONArray jsonArray = (JSONArray) parser.parse(obj);
+    	if(jsonArray.get(0)!=null) {
+   		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
+   		  return  (String) jsonObject.get("value");
+		
 		}
+    	 }
 		return null;
 	}
 
@@ -587,6 +594,7 @@ public class PrintServiceImpl implements PrintService{
 						try {
 						obj = new JSONParser().parse(object.toString());
 						} catch (Exception e) {
+							printLogger.error("Error while parsing Json field" ,e);
 							obj = object;
 						}
 					
