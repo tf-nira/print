@@ -323,11 +323,11 @@ public class PrintServiceImpl implements PrintService{
 			persoAddressDto.setParish(getAttribute(attributes,"applicantPlaceOfResidenceParish_eng"));
 			persoAddressDto.setVillage(getAttribute(attributes,"applicantPlaceOfResidenceVillage_eng"));
 			persoRequestDto.setAddress(persoAddressDto);			
-			persoRequestDto.setDateOfIssuance(
-					decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
-							: null);
-			persoRequestDto.setDateOfExpiry(
-					decryptedJson.get("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
+			//persoRequestDto.setDateOfIssuance(
+				//	decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
+				//			: null);
+			//persoRequestDto.setDateOfExpiry(
+				//	decryptedJson.optJSONObject("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
 			persoRequestDto.setNationality(
 					decryptedJson.get("Nationality") != null ? decryptedJson.get("Nationality").toString() : null);
 			persoRequestDto.setGivenName(getAttribute(attributes,"givenName_eng"));
