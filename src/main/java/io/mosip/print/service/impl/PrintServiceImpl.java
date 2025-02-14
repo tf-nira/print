@@ -334,11 +334,16 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setNin(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
-			persoBiometricsDto.setFaceImagePortrait(getFaceBiometrics(faceCbeff, "FACE", null));
-			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;
+			if (faceCbeff != null) {
+				persoBiometricsDto.setFaceImagePortrait(getExtractedBiometrics(faceCbeff, "Face", null, true));
+			}
 
-			persoBiometricsDto.setLeftIris(getIrisBiometrics(irisCbeff, "Left"));
-			persoBiometricsDto.setRightIris(getIrisBiometrics(irisCbeff, "Right"));
+			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;
+			if (irisCbeff != null) {
+				persoBiometricsDto.setLeftIris(getExtractedBiometrics(irisCbeff, "Iris", "Left", false));
+				persoBiometricsDto.setRightIris(getExtractedBiometrics(irisCbeff, "Iris", "Right", false));
+			}
+
 			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
 			if(decryptedJson.get("bestTwoFingers")!=null) {
 				String obj=decryptedJson.get("bestTwoFingers").toString();
@@ -349,7 +354,7 @@ public class PrintServiceImpl implements PrintService{
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
 		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
-		               String rawFinger=getFingerBiometrics(fingerPrint);
+						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(1);
 					fingerPrintDto.setImage(rawFinger);
@@ -361,7 +366,7 @@ public class PrintServiceImpl implements PrintService{
 						String fingerPrint = (String) jsonObject.get("fingerPrint");
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
 					fingerPrintDto.setIndex(8);
-					String rawFinger=getFingerBiometrics(fingerPrint);
+					String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
 					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
@@ -555,11 +560,14 @@ public class PrintServiceImpl implements PrintService{
 		}
 		return data;
 	}
-	private String getFingerBiometrics(String individualBio) throws Exception {
+
+	private String getExtractedBiometrics(String individualBio, String type, String subType, boolean isUpscaleRequired)
+			throws Exception {
 		String data=null;
-		Map<String, String> bdbBasedOnFinger =  cbeffutil.getBDBBasedOnType(Base64.decodeBase64(individualBio), "Finger", null);
+		Map<String, String> bdbBasedOnFinger = cbeffutil.getBDBBasedOnType(Base64.decodeBase64(individualBio), type,
+				subType);
 		for (Entry<String, String> iterable_element : bdbBasedOnFinger.entrySet()) {
-			byte[] fingerData=convertToJPG(iterable_element.getValue(), false);
+			byte[] fingerData = convertToJPG(iterable_element.getValue(), isUpscaleRequired);
 			 data = java.util.Base64.getEncoder().encodeToString(fingerData);
 		}
 		return data;
