@@ -384,12 +384,12 @@ public class PrintServiceImpl implements PrintService{
 					ex.getMessage(), ex);
 
 		} finally {
-//			try {
-//				printLogger.info("Object MApper PersoRequestDto in finally  " + new ObjectMapper().writeValueAsString(persoRequestDto));
-//			} catch (JsonProcessingException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
+			try {
+				printLogger.info("Object mapper PersoRequestDto in finally  " + new ObjectMapper().writeValueAsString(persoRequestDto));
+			} catch (JsonProcessingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			//printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
 			String eventId = "";
 			String eventName = "";
