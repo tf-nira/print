@@ -1010,4 +1010,12 @@ public class PrintServiceImpl implements PrintService{
 		return scaledBI;
 	}
 
+	@Override
+	public String callPersoService(PersoRequestDto request) {
+		// TODO Auto-generated method stub
+		return serviceCaller.callPersoService(request);
+	}
+	
+	
+
 }

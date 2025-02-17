@@ -1,6 +1,7 @@
 package io.mosip.print.controller;
 
 import io.mosip.print.dto.CardUpdateRequestDto;
+import io.mosip.print.dto.PersoRequestDto;
 import io.mosip.print.dto.UpdateStatusResponseDto;
 
 import org.slf4j.Logger;
@@ -54,5 +55,10 @@ public class Print {
 	public UpdateStatusResponseDto updateCardStatus(@RequestBody CardUpdateRequestDto cardUpdateRequest) {
 		printLogger.info("Data received " + ", id: {} ", cardUpdateRequest.getTopic());
 		return printService.updateCardStatus(cardUpdateRequest);
+	}
+	
+	@PostMapping(path = "/testPersoService")
+	public String callPersoService(@RequestBody PersoRequestDto request) {
+		return printService.callPersoService(request);
 	}
 }
