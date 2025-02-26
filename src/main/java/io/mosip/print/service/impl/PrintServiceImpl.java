@@ -352,20 +352,20 @@ public class PrintServiceImpl implements PrintService{
 			
 		    	 if(jsonArray.get(0)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
-		    		  String fingersIndex = (String) jsonObject.get("fingersIndex");
+						Integer fingersIndex = (Integer) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
 						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
-					fingerPrintDto.setIndex(1);
+					fingerPrintDto.setIndex(fingersIndex);
 					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 				}
 		    	 if(jsonArray.get(1)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
-						String fingersIndex = (String) jsonObject.get("fingersIndex");
+						Integer fingersIndex = (Integer) jsonObject.get("fingersIndex");
 						String fingerPrint = (String) jsonObject.get("fingerPrint");
 					FingerPrintDto fingerPrintDto=new FingerPrintDto();
-					fingerPrintDto.setIndex(8);
+					fingerPrintDto.setIndex(fingersIndex);
 					String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
 					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
