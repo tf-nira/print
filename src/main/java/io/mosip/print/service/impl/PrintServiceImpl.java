@@ -307,6 +307,9 @@ public class PrintServiceImpl implements PrintService{
 			//printLogger.info("decryptedJson " + decryptedJson.toString());	
 			
 			//printLogger.info("attributes from set template " +attributes.toString());	
+			persoRequestDto.setResidenceStatus(getAttribute(decryptedJson, "residenceStatus"));
+			persoRequestDto.setApplicantForeignResidenceCountry(
+					getAttribute(decryptedJson, "applicantForeignResidenceCountry"));
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
 			persoAddressDto.setCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceCounty"));
 			persoAddressDto.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfResidenceDistrict"));

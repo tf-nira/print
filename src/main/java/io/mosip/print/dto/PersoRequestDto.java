@@ -20,5 +20,7 @@ public class PersoRequestDto {
 	private String dateOfExpiry;
 	private String sexCode;
 	private String issuingCountryCode;
+	private String applicantForeignResidenceCountry;
+	private String residenceStatus;
 	private PersoBiometricsDto biometrics;
 }
