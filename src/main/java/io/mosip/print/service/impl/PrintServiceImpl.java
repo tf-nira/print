@@ -962,7 +962,7 @@ public class PrintServiceImpl implements PrintService{
 		eventData.setId(cardUpdateInput.getEvent().getRequestId());
 		eventData.setType(eventType);
 		data.setEvent(eventData);
-		webSubSubscriptionHelper.cardNumberPublishEvent(topic, data);
+		webSubSubscriptionHelper.cardNumberPublishEvent(data.getTopic(), data);
 	}
 	private byte[] convertToJPG(String isoTemplate, boolean isUpscaleRequired) {
 		byte[] inputFileBytes = Base64.decodeBase64(isoTemplate);
