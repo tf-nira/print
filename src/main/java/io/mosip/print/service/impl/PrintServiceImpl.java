@@ -295,7 +295,6 @@ public class PrintServiceImpl implements PrintService{
 		String uin = null;
 		LogDescription description = new LogDescription();
 
-		Map<String, Object> attributes = new LinkedHashMap<>();
 		boolean isTransactionSuccessful = false;
 
 
@@ -317,41 +316,40 @@ public class PrintServiceImpl implements PrintService{
 			persoAddressDto.setParish(getAttribute(decryptedJson, "applicantPlaceOfResidenceParish"));
 			persoAddressDto.setVillage(getAttribute(decryptedJson, "applicantPlaceOfResidenceVillage"));
 			persoRequestDto.setAddress(persoAddressDto);
-			persoRequestDto.setDateOfIssuance(
-					decryptedJson.get("dateOfIssuance") != null ? decryptedJson.get("dateOfIssuance").toString()
-							: null);
-			persoRequestDto.setDateOfExpiry(
-					decryptedJson.get("dateOfExpiry") != null ? decryptedJson.get("dateOfExpiry").toString() : null);
-			persoRequestDto.setNationality(
-					decryptedJson.get("Nationality") != null ? decryptedJson.get("Nationality").toString() : null);
+			persoRequestDto.setDateOfIssuance(getString(decryptedJson, "dateOfIssuance"));
+			persoRequestDto.setDateOfExpiry(getString(decryptedJson, "dateOfExpiry"));
+			persoRequestDto.setNationality(getString(decryptedJson, "Nationality"));
 			persoRequestDto.setGivenName(getAttribute(decryptedJson,"givenName"));
 			persoRequestDto.setOtherName(getAttribute(decryptedJson,"otherNames"));
 			persoRequestDto.setSurName(getAttribute(decryptedJson,"surname"));
 			persoRequestDto.setSexCode(getAttribute(decryptedJson, "gender").equalsIgnoreCase("Male") ? "M" : "F");
-			persoRequestDto.setDateOfBirth(decryptedJson.get("dateOfBirth") !=null ? decryptedJson.get("dateOfBirth").toString() : null);
+			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
 			persoRequestDto.setExternalRequestId(requestId);
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
-			persoRequestDto.setCardNumber(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
-			persoRequestDto.setNin(decryptedJson.get("NIN") != null ? decryptedJson.get("NIN").toString() : null);
+			persoRequestDto.setCardNumber(getString(decryptedJson, "NIN"));
+			persoRequestDto.setNin(getString(decryptedJson, "NIN"));
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
-			String faceCbeff = decryptedJson.get("Face") != null ? decryptedJson.get("Face").toString() : null;
+			String faceCbeff = getString(decryptedJson, "Face");
 			if (faceCbeff != null) {
 				persoBiometricsDto.setFaceImagePortrait(getExtractedBiometrics(faceCbeff, "Face", null, true));
+			} else {
+				persoBiometricsDto.setFaceImagePortrait(null);
 			}
-
-			String irisCbeff = decryptedJson.get("Iris") != null ? decryptedJson.get("Iris").toString() : null;
+			String irisCbeff = getString(decryptedJson, "Iris");
 			if (irisCbeff != null) {
 				persoBiometricsDto.setLeftIris(getExtractedBiometrics(irisCbeff, "Iris", "Left", false));
 				persoBiometricsDto.setRightIris(getExtractedBiometrics(irisCbeff, "Iris", "Right", false));
+			} else {
+				persoBiometricsDto.setLeftIris(null);
+				persoBiometricsDto.setRightIris(null);
 			}
-
-			persoBiometricsDto.setSignature(decryptedJson.get("signature") !=null ? decryptedJson.get("signature").toString() : null);
-			if(decryptedJson.get("bestTwoFingers")!=null) {
-				String obj=decryptedJson.get("bestTwoFingers").toString();
+			persoBiometricsDto.setSignature(getString(decryptedJson, "signature"));
+			String bestTwoFingers = getString(decryptedJson, "bestTwoFingers");
+			if (bestTwoFingers != null) {
 				JSONParser parser = new JSONParser();
-		    	JSONArray jsonArray = (JSONArray) parser.parse(obj);
+				JSONArray jsonArray = (JSONArray) parser.parse(bestTwoFingers);
 			
 		    	 if(jsonArray.get(0)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
@@ -373,6 +371,9 @@ public class PrintServiceImpl implements PrintService{
 					fingerPrintDto.setImage(rawFinger);
 					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
+			} else {
+				persoBiometricsDto.setPrimaryFingerPrint(null);
+				persoBiometricsDto.setSecondaryFingerPrint(null);
 			}
 			
 				persoRequestDto.setBiometrics(persoBiometricsDto);
@@ -439,6 +440,17 @@ public class PrintServiceImpl implements PrintService{
     	 }
 		}
 		return "";
+	}
+
+	private String getString(org.json.JSONObject json, String attr) throws ParseException {
+		String value = null;
+		if (json.has(attr)) {
+			Object obj = json.get(attr);
+			if (obj != null) {
+				value = obj.toString();
+			}
+		}
+		return value;
 	}
 
 	/**
