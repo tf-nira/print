@@ -9,6 +9,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -230,6 +231,9 @@ public class PrintServiceImpl implements PrintService{
 	@Value("${mosip.template-language}")
 	private String templateLang;
 
+	@Value("${mosip.print.signature.filename:signature.png}")
+	private String signatureFile;
+
 	private static final String supportedLang = "eng";
 
 	
@@ -345,7 +349,15 @@ public class PrintServiceImpl implements PrintService{
 				persoBiometricsDto.setLeftIris(null);
 				persoBiometricsDto.setRightIris(null);
 			}
-			persoBiometricsDto.setSignature(getString(decryptedJson, "signature"));
+			String signature = getString(decryptedJson, "signature");
+			if (signature != null && signature.equalsIgnoreCase("Unable to Sign")) {
+				InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile);
+				byte[] signatureBytes = in.readAllBytes();
+				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
+			} else {
+				persoBiometricsDto.setSignature(signature);
+			}
+
 			String bestTwoFingers = getString(decryptedJson, "bestTwoFingers");
 			if (bestTwoFingers != null) {
 				JSONParser parser = new JSONParser();
