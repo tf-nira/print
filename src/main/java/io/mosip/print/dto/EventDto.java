@@ -6,7 +6,7 @@ import lombok.Data;
 public class EventDto {	
 	private String requestId; 
 	private String transactionId; 
-	private String cardNumber; 
+	private String nin; 
 	private String status; 
 	private String msg;
 	private String plasticCardNumber;
