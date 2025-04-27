@@ -332,7 +332,6 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
-			persoRequestDto.setCardNumber(getString(decryptedJson, "NIN"));
 			persoRequestDto.setNin(getString(decryptedJson, "NIN"));
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
@@ -974,7 +973,7 @@ public class PrintServiceImpl implements PrintService{
 		data.setTopic("CARD_NUMBER_UPDATE");
 		EventDetails eventDetails = new EventDetails();
 		eventDetails.setCardNumber(cardUpdateInput.getEvent().getPlasticCardNumber());
-		eventDetails.setNin(cardUpdateInput.getEvent().getCardNumber());
+		eventDetails.setNin(cardUpdateInput.getEvent().getNin());
 		EventTypeDto eventType = new EventTypeDto();
 		eventType.setName("CARD_NUMBER_UPDATE");
 		eventType.setNamespace("PRINT_SERVICE");
