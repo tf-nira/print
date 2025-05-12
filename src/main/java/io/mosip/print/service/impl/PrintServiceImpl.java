@@ -326,7 +326,8 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setGivenName(getAttribute(decryptedJson,"givenName"));
 			persoRequestDto.setOtherName(getAttribute(decryptedJson,"otherNames"));
 			persoRequestDto.setSurName(getAttribute(decryptedJson,"surname"));
-			persoRequestDto.setSexCode(getAttribute(decryptedJson, "gender").equalsIgnoreCase("Male") ? "M" : "F");
+			String gender = getAttribute(decryptedJson, "gender");
+			persoRequestDto.setSexCode((gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("M")) ? "M" : "F");
 			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
 			persoRequestDto.setExternalRequestId(requestId);
 			persoRequestDto.setTransactionId(requestId);
