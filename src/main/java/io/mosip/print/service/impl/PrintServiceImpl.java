@@ -367,20 +367,30 @@ public class PrintServiceImpl implements PrintService{
 						Long fingersIndex = (Long) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
 						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
-					FingerPrintDto fingerPrintDto=new FingerPrintDto();
-					fingerPrintDto.setIndex(fingersIndex.intValue());
-					fingerPrintDto.setImage(rawFinger);
-					persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
+						if (rawFinger != null) {
+							FingerPrintDto fingerPrintDto = new FingerPrintDto();
+							fingerPrintDto.setIndex(fingersIndex.intValue());
+							fingerPrintDto.setImage(rawFinger);
+							persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
+						} else {
+							persoBiometricsDto.setPrimaryFingerPrint(null);
+						}
+
 				}
 		    	 if(jsonArray.get(1)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
 						Long fingersIndex = (Long) jsonObject.get("fingersIndex");
 						String fingerPrint = (String) jsonObject.get("fingerPrint");
-					FingerPrintDto fingerPrintDto=new FingerPrintDto();
-					fingerPrintDto.setIndex(fingersIndex.intValue());
-					String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
-					fingerPrintDto.setImage(rawFinger);
-					persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
+						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
+						if (rawFinger != null) {
+							FingerPrintDto fingerPrintDto = new FingerPrintDto();
+							fingerPrintDto.setIndex(fingersIndex.intValue());
+							fingerPrintDto.setImage(rawFinger);
+							persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
+						} else {
+							persoBiometricsDto.setSecondaryFingerPrint(null);
+						}
+
 				}
 			} else {
 				persoBiometricsDto.setPrimaryFingerPrint(null);
