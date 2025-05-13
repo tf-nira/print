@@ -104,7 +104,6 @@ import io.mosip.print.service.UinCardGenerator;
 import io.mosip.print.spi.CbeffUtil;
 import io.mosip.print.spi.QrCodeGenerator;
 import io.mosip.print.util.AuditLogRequestBuilder;
-import io.mosip.print.util.BiometricExtractionUtil;
 import io.mosip.print.util.CbeffToBiometricUtil;
 import io.mosip.print.util.CryptoCoreUtil;
 import io.mosip.print.util.CryptoUtil;
@@ -594,22 +593,15 @@ public class PrintServiceImpl implements PrintService{
 		Map<String, String> bdbBasedOnFinger = cbeffutil.getBDBBasedOnType(Base64.decodeBase64(individualBio), type,
 				subType);
 		for (Entry<String, String> iterable_element : bdbBasedOnFinger.entrySet()) {
-			byte[] fingerData = convertToJPG(iterable_element.getValue(), isUpscaleRequired);
-			 data = java.util.Base64.getEncoder().encodeToString(fingerData);
+			if (iterable_element.getValue() != null) {
+				byte[] fingerData = convertToJPG(iterable_element.getValue(), isUpscaleRequired);
+				data = java.util.Base64.getEncoder().encodeToString(fingerData);
+			}
 		}
+
 		return data;
 	}
 
-	private String getIrisBiometrics(String individualBio, String subType) throws Exception {
-		String data = null;
-		Map<String, String> bdbBasedOnIris = cbeffutil.getBDBBasedOnType(Base64.decodeBase64(individualBio), "Iris",
-				subType);
-		for (Entry<String, String> iterable_element : bdbBasedOnIris.entrySet()) {
-			byte[] inputFileBytes = Base64.decodeBase64(iterable_element.getValue());
-			data = BiometricExtractionUtil.convertIrisIsoToImage(inputFileBytes);
-		}
-		return data;
-	}
 
 	/**
 	 * Gets the artifacts.
