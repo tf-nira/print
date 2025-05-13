@@ -367,34 +367,37 @@ public class PrintServiceImpl implements PrintService{
 						Long fingersIndex = (Long) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
 						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
+						FingerPrintDto fingerPrintDto = new FingerPrintDto();
 						if (rawFinger != null) {
-							FingerPrintDto fingerPrintDto = new FingerPrintDto();
 							fingerPrintDto.setIndex(fingersIndex.intValue());
 							fingerPrintDto.setImage(rawFinger);
-							persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 						} else {
-							persoBiometricsDto.setPrimaryFingerPrint(null);
+							fingerPrintDto.setIndex(null);
+							fingerPrintDto.setImage(null);
 						}
-
+						persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 				}
 		    	 if(jsonArray.get(1)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
 						Long fingersIndex = (Long) jsonObject.get("fingersIndex");
 						String fingerPrint = (String) jsonObject.get("fingerPrint");
 						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
+						FingerPrintDto fingerPrintDto = new FingerPrintDto();
 						if (rawFinger != null) {
-							FingerPrintDto fingerPrintDto = new FingerPrintDto();
 							fingerPrintDto.setIndex(fingersIndex.intValue());
 							fingerPrintDto.setImage(rawFinger);
-							persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 						} else {
-							persoBiometricsDto.setSecondaryFingerPrint(null);
+							fingerPrintDto.setIndex(null);
+							fingerPrintDto.setImage(null);
 						}
-
+						persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
 			} else {
-				persoBiometricsDto.setPrimaryFingerPrint(null);
-				persoBiometricsDto.setSecondaryFingerPrint(null);
+				FingerPrintDto fingerPrintDto = new FingerPrintDto();
+				fingerPrintDto.setIndex(null);
+				fingerPrintDto.setImage(null);
+				persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
+				persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 			}
 			
 				persoRequestDto.setBiometrics(persoBiometricsDto);
