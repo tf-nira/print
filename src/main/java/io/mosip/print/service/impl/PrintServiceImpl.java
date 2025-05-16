@@ -322,9 +322,24 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setDateOfIssuance(getString(decryptedJson, "dateOfIssuance"));
 			persoRequestDto.setDateOfExpiry(getString(decryptedJson, "dateOfExpiry"));
 			persoRequestDto.setNationality(getString(decryptedJson, "Nationality"));
-			persoRequestDto.setGivenName(getAttribute(decryptedJson,"givenName"));
-			persoRequestDto.setOtherName(getAttribute(decryptedJson,"otherNames"));
-			persoRequestDto.setSurName(getAttribute(decryptedJson,"surname"));
+			String givenName = getAttribute(decryptedJson, "givenName");
+			if (givenName != null) {
+				persoRequestDto.setGivenName(givenName.toUpperCase());
+			} else {
+				persoRequestDto.setGivenName(givenName);
+			}
+			String otherNames = getAttribute(decryptedJson, "otherNames");
+			if (otherNames != null) {
+				persoRequestDto.setOtherName(otherNames.toUpperCase());
+			} else {
+				persoRequestDto.setOtherName(otherNames);
+			}
+			String surname = getAttribute(decryptedJson, "surname");
+			if (surname != null) {
+				persoRequestDto.setSurName(surname.toUpperCase());
+			} else {
+				persoRequestDto.setSurName(surname);
+			}
 			String gender = getAttribute(decryptedJson, "gender");
 			persoRequestDto.setSexCode((gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("M")) ? "M" : "F");
 			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
