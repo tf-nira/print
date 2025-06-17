@@ -13,6 +13,7 @@ public class PersoRequestDto {
 	private String nationality;
 	private String nationalityCode;
 	private PersoAddressDto address;
+	private PersoEnrollmenetAddressDTO placeOfEnrollment;
 	private String nin;
 	private String dateOfBirth;
 	private String dateOfIssuance;

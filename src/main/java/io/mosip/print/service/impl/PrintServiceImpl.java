@@ -76,6 +76,7 @@ import io.mosip.print.dto.EventTypeDto;
 import io.mosip.print.dto.FingerPrintDto;
 import io.mosip.print.dto.JsonValue;
 import io.mosip.print.dto.PersoAddressDto;
+import io.mosip.print.dto.PersoEnrollmenetAddressDTO;
 import io.mosip.print.dto.PersoBiometricsDto;
 import io.mosip.print.dto.PersoRequestDto;
 import io.mosip.print.dto.UpdateStatusResponseDto;
@@ -319,6 +320,15 @@ public class PrintServiceImpl implements PrintService{
 			persoAddressDto.setParish(getAttribute(decryptedJson, "applicantPlaceOfResidenceParish"));
 			persoAddressDto.setVillage(getAttribute(decryptedJson, "applicantPlaceOfResidenceVillage"));
 			persoRequestDto.setAddress(persoAddressDto);
+
+			PersoEnrollmenetAddressDTO persoEnrollmenetAddressDTO=new PersoEnrollmenetAddressDTO();
+			persoEnrollmenetAddressDTO.setCounty(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentCounty"));
+			persoEnrollmenetAddressDTO.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentDistrict"));
+			persoEnrollmenetAddressDTO.setSubCounty(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentSubCounty"));
+			persoEnrollmenetAddressDTO.setParish(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentParish"));
+			persoEnrollmenetAddressDTO.setVillage(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentVillage"));
+			persoRequestDto.setPlaceOfEnrollment(persoEnrollmenetAddressDTO);
+
 			persoRequestDto.setDateOfIssuance(getString(decryptedJson, "dateOfIssuance"));
 			persoRequestDto.setDateOfExpiry(getString(decryptedJson, "dateOfExpiry"));
 			persoRequestDto.setNationality(getString(decryptedJson, "Nationality"));
