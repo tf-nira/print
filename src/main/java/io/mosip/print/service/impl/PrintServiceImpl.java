@@ -76,8 +76,8 @@ import io.mosip.print.dto.EventTypeDto;
 import io.mosip.print.dto.FingerPrintDto;
 import io.mosip.print.dto.JsonValue;
 import io.mosip.print.dto.PersoAddressDto;
-import io.mosip.print.dto.PersoEnrollmenetAddressDTO;
 import io.mosip.print.dto.PersoBiometricsDto;
+import io.mosip.print.dto.PersoEnrollmenetAddressDTO;
 import io.mosip.print.dto.PersoRequestDto;
 import io.mosip.print.dto.UpdateStatusResponseDto;
 import io.mosip.print.dto.VidRequestDto;
@@ -109,6 +109,7 @@ import io.mosip.print.util.CbeffToBiometricUtil;
 import io.mosip.print.util.CryptoCoreUtil;
 import io.mosip.print.util.CryptoUtil;
 import io.mosip.print.util.DataShareUtil;
+import io.mosip.print.util.DataUtil;
 import io.mosip.print.util.DateUtils;
 import io.mosip.print.util.JsonUtil;
 import io.mosip.print.util.PersoServiceCaller;
@@ -317,16 +318,19 @@ public class PrintServiceImpl implements PrintService{
 			persoAddressDto.setCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceCounty"));
 			persoAddressDto.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfResidenceDistrict"));
 			persoAddressDto.setSubCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceSubCounty"));
-			persoAddressDto.setParish(getAttribute(decryptedJson, "applicantPlaceOfResidenceParish"));
-			persoAddressDto.setVillage(getAttribute(decryptedJson, "applicantPlaceOfResidenceVillage"));
+			persoAddressDto.setParish(DataUtil
+					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfResidenceParish")));
+			persoAddressDto.setVillage(DataUtil
+					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfResidenceVillage")));
 			persoRequestDto.setAddress(persoAddressDto);
 
 			PersoEnrollmenetAddressDTO persoEnrollmenetAddressDTO=new PersoEnrollmenetAddressDTO();
 			persoEnrollmenetAddressDTO.setCounty(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentCounty"));
 			persoEnrollmenetAddressDTO.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentDistrict"));
 			persoEnrollmenetAddressDTO.setSubCounty(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentSubCounty"));
-			persoEnrollmenetAddressDTO.setParish(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentParish"));
-			persoEnrollmenetAddressDTO.setVillage(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentVillage"));
+			persoEnrollmenetAddressDTO.setParish(DataUtil.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentParish")));
+			persoEnrollmenetAddressDTO.setVillage(DataUtil
+					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentVillage")));
 			persoRequestDto.setPlaceOfEnrollment(persoEnrollmenetAddressDTO);
 
 			persoRequestDto.setDateOfIssuance(getString(decryptedJson, "dateOfIssuance"));
@@ -357,7 +361,13 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
-			persoRequestDto.setNin(getString(decryptedJson, "NIN"));
+			String NIN = getString(decryptedJson, "NIN");
+			if (NIN != null) {
+				persoRequestDto.setNin(NIN.toUpperCase());
+			} else {
+				persoRequestDto.setNin(NIN);
+			}
+
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
 			if (faceCbeff != null) {
