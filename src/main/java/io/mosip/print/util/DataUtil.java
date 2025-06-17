@@ -44,9 +44,9 @@ public class DataUtil {
 		e.printStackTrace();
 	}
 	}
-	public String getParishOrVillageCorrectData(String inputData) {
-		printLogger.info(
-				"ParishVillageMapSize " + parishAndVillage.size());
+
+	public static String getParishOrVillageCorrectData(String inputData) {
+
 		if (inputData != null) {
 			String outputData = parishAndVillage.get(inputData);
 			if (outputData != null) {
