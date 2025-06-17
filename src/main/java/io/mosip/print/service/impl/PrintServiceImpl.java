@@ -347,7 +347,13 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
-			persoRequestDto.setNin(getString(decryptedJson, "NIN"));
+			String NIN = getString(decryptedJson, "NIN");
+			if (NIN != null) {
+				persoRequestDto.setNin(NIN.toUpperCase());
+			} else {
+				persoRequestDto.setNin(NIN);
+			}
+
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
 			if (faceCbeff != null) {
