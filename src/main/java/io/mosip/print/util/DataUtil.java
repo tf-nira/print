@@ -46,8 +46,6 @@ public class DataUtil {
 	}
 
 	public static String getParishOrVillageCorrectData(String inputData) {
-		System.out.println("PARSISH SIZE *****************" + parishAndVillage.size());
-		System.out.println("PARSISH values *****************" + parishAndVillage);
 		if (inputData != null) {
 			String outputData = parishAndVillage.get(inputData);
 			if (outputData != null) {
