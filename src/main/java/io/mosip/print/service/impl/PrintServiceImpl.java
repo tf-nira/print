@@ -60,6 +60,7 @@ import io.mosip.print.constant.ApiName;
 import io.mosip.print.constant.EventId;
 import io.mosip.print.constant.EventName;
 import io.mosip.print.constant.EventType;
+import io.mosip.print.constant.FingerType;
 import io.mosip.print.constant.ModuleName;
 import io.mosip.print.constant.PDFGeneratorExceptionCodeConstant;
 import io.mosip.print.constant.PlatformSuccessMessages;
@@ -82,6 +83,7 @@ import io.mosip.print.dto.PersoRequestDto;
 import io.mosip.print.dto.UpdateStatusResponseDto;
 import io.mosip.print.dto.VidRequestDto;
 import io.mosip.print.dto.VidResponseDTO;
+import io.mosip.print.entity.CardDetail;
 import io.mosip.print.exception.ApiNotAccessibleException;
 import io.mosip.print.exception.ApisResourceAccessException;
 import io.mosip.print.exception.CryptoManagerException;
@@ -99,6 +101,7 @@ import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.model.CredentialStatusEvent;
 import io.mosip.print.model.EventModel;
 import io.mosip.print.model.StatusEvent;
+import io.mosip.print.repository.CardDetailRepository;
 import io.mosip.print.service.PrintRestClientService;
 import io.mosip.print.service.PrintService;
 import io.mosip.print.service.UinCardGenerator;
@@ -222,6 +225,9 @@ public class PrintServiceImpl implements PrintService{
 
 	@Autowired
 	private PublisherClient<String, Object, HttpHeaders> pb;
+	
+	@Autowired
+	CardDetailRepository cardDetailRepository;
 	
 	@Value("${mosip.datashare.partner.id}")
 	private String partnerId;
@@ -453,6 +459,31 @@ public class PrintServiceImpl implements PrintService{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+			CardDetail cardDetail = new CardDetail();
+			cardDetail.setTransactionId(persoRequestDto.getTransactionId());
+			//cardDetail.setRegId(persoRequestDto.getRegId());
+			cardDetail.setNin(persoRequestDto.getNin());
+			cardDetail.setGivenName(persoRequestDto.getGivenName());
+			cardDetail.setSurname(persoRequestDto.getSurName());
+			cardDetail.setOtherName(persoRequestDto.getOtherName());
+			cardDetail.setNationality(persoRequestDto.getNationality());
+			cardDetail.setSex(persoRequestDto.getSexCode());
+			cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
+			String prFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
+			        ? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
+			                : null);
+			String secFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
+			        ? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
+			                : null);
+			cardDetail.setPrimaryFinger(prFingerName);
+			cardDetail.setSecondaryFinger(secFingerName);
+			cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
+			cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
+			cardDetail.setCreatedBy("SYSTEM");
+			cardDetail.setCrDTimes(LocalDateTime.now());
+			cardDetailRepository.save(cardDetail);
+			
 			//printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
 			String eventId = "";
 			String eventName = "";

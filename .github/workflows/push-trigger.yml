@@ -21,6 +21,7 @@ on:
       - MOSIP*
       - release*
       - tf_nira_dev
+      - tf_nira_prod
 
 jobs:
   build-maven-print:
