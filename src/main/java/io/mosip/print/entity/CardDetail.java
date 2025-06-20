@@ -1,5 +1,8 @@
 package io.mosip.print.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,13 +17,14 @@ import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
-@Entity
+@Data
 @NoArgsConstructor
-@Getter
-@Setter
+@AllArgsConstructor
+@Entity
 @Table(name = "card_detail", schema = "print")
-public class CardDetail implements Serializable {
+public class CardDetail {
     
 	@Id
     @Column(name = "transaction_id")

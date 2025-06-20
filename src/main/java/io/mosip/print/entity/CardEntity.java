@@ -1,5 +1,8 @@
 package io.mosip.print.entity;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,6 +15,7 @@ import javax.persistence.Table;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 /**
  * The persistent class Processed RegPrc print List database table.
@@ -20,12 +24,12 @@ import java.util.Date;
  * @since 1.0.0
  */
 
-@Entity
+@Data
 @NoArgsConstructor
-@Getter
-@Setter
+@AllArgsConstructor
+@Entity
 @Table(name = "nira_card", schema = "print")
-public class CardEntity implements Serializable {
+public class CardEntity {
     /**
      * The Id.
      */

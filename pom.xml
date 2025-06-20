@@ -66,6 +66,8 @@
 		<bouncycastle.version>1.66</bouncycastle.version>
 		<jwt.version> 3.8.1</jwt.version>
 		<google.zxing.version>3.3.3</google.zxing.version>
+		<postgresql.version>42.2.2</postgresql.version>
+		<kernel.version>1.2.0.1</kernel.version>
 	</properties>
 
 	<dependencies>
@@ -81,9 +83,9 @@
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-			<version>${spring.data.jpa.version}</version>
+			<groupId>io.mosip.kernel</groupId>
+			<artifactId>kernel-dataaccess-hibernate</artifactId>
+			<version>${kernel.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
