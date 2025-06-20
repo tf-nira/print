@@ -1,10 +1,11 @@
 package io.mosip.print.repository;
 
-import io.mosip.kernel.core.dataaccess.spi.repository.BaseRepository;
 import io.mosip.print.entity.CardDetail;
+
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-@Repository("cardDetailRepository")
-public interface CardDetailRepository extends BaseRepository<CardDetail, String> {
+@Repository
+public interface CardDetailRepository extends JpaRepository<CardDetail, String> {
     
 }

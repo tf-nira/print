@@ -460,29 +460,34 @@ public class PrintServiceImpl implements PrintService{
 				e.printStackTrace();
 			}
 			
-			CardDetail cardDetail = new CardDetail();
-			cardDetail.setTransactionId(persoRequestDto.getTransactionId());
-			//cardDetail.setRegId(persoRequestDto.getRegId());
-			cardDetail.setNin(persoRequestDto.getNin());
-			cardDetail.setGivenName(persoRequestDto.getGivenName());
-			cardDetail.setSurname(persoRequestDto.getSurName());
-			cardDetail.setOtherName(persoRequestDto.getOtherName());
-			cardDetail.setNationality(persoRequestDto.getNationality());
-			cardDetail.setSex(persoRequestDto.getSexCode());
-			cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
-			String prFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
-			        ? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
-			                : null);
-			String secFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
-			        ? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
-			                : null);
-			cardDetail.setPrimaryFinger(prFingerName);
-			cardDetail.setSecondaryFinger(secFingerName);
-			cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
-			cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
-			cardDetail.setCreatedBy("SYSTEM");
-			cardDetail.setCrDTimes(LocalDateTime.now());
-			cardDetailRepository.save(cardDetail);
+			try {
+				printLogger.info("Saving card details");
+				CardDetail cardDetail = new CardDetail();
+				cardDetail.setTransactionId(persoRequestDto.getTransactionId());
+				//cardDetail.setRegId(persoRequestDto.getRegId());
+				cardDetail.setNin(persoRequestDto.getNin());
+				cardDetail.setGivenName(persoRequestDto.getGivenName());
+				cardDetail.setSurname(persoRequestDto.getSurName());
+				cardDetail.setOtherName(persoRequestDto.getOtherName());
+				cardDetail.setNationality(persoRequestDto.getNationality());
+				cardDetail.setSex(persoRequestDto.getSexCode());
+				cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
+				String prFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
+				        ? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
+				                : null);
+				String secFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
+				        ? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
+				                : null);
+				cardDetail.setPrimaryFinger(prFingerName);
+				cardDetail.setSecondaryFinger(secFingerName);
+				cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
+				cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
+				cardDetail.setCreatedBy("SYSTEM");
+				cardDetail.setCrDTimes(LocalDateTime.now());
+				cardDetailRepository.save(cardDetail);
+			} catch (Exception e) {
+				printLogger.error("Error while saving data: ", e);
+			}
 			
 			//printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
 			String eventId = "";
