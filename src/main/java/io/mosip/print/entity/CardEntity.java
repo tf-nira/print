@@ -20,7 +20,6 @@ import java.util.Date;
  * @since 1.0.0
  */
 
-@Component
 @Entity
 @NoArgsConstructor
 @Getter
