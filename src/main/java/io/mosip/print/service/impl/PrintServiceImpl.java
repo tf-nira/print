@@ -483,7 +483,7 @@ public class PrintServiceImpl implements PrintService{
 				cardDetail.setSecondaryFinger(secFingerName);
 				cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
 				cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
-				cardDetail.setEventData(eventModel.toString());
+				cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
 				//Need to change to true once data correct confirmed
 				cardDetail.setIsReadyToPush(false);
 				cardDetail.setIsPushed(false);
