@@ -13,7 +13,7 @@ CREATE TABLE print.card_detail (
     secondary_finger character varying,
     date_of_issue character varying,
     date_of_expiry character varying,
-	data_share_url character varying,
+	event_data character varying,
 	is_ready_to_push BOOLEAN DEFAULT FALSE,
 	is_pushed BOOLEAN DEFAULT FALSE,
     cr_by character varying(255) NOT NULL,
