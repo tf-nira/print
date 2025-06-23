@@ -66,6 +66,15 @@ public class CardDetail {
     @Column(name = "date_of_expiry")
     private String dateOfExpiry;
     
+    @Column(name = "data_share_url")
+    private String dataShareUrl;
+    
+    @Column(name = "is_ready_to_push")
+    private Boolean isReadyToPush;
+	
+    @Column(name = "is_pushed")
+	private Boolean isPushed;
+    
     @NotNull
 	@Column(name = "cr_by")
 	private String createdBy;
