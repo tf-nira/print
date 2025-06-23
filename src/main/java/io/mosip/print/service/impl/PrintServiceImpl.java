@@ -269,7 +269,7 @@ public class PrintServiceImpl implements PrintService{
 			String sign = proofMap.get("signature").toString();
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel.getEvent().getDataShareUri());
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel);
 			//Need to uncomment once data correct confirmed
 //			serviceCaller.callPersoService(persoRequestDto);	
 		}catch (Exception e){
@@ -299,7 +299,7 @@ public class PrintServiceImpl implements PrintService{
 	private PersoRequestDto getPersoRequest(String credential, String credentialType, String encryptionPin,
 			String requestId, String sign,
 			String cardType,
-			boolean isPasswordProtected, String dataShareUrl) {
+			boolean isPasswordProtected, EventModel eventModel) {
 		printLogger.debug("PrintServiceImpl::getDocuments()::entry");
 		PersoRequestDto persoRequestDto=new PersoRequestDto();
 		String credentialSubject;
@@ -483,7 +483,7 @@ public class PrintServiceImpl implements PrintService{
 				cardDetail.setSecondaryFinger(secFingerName);
 				cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
 				cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
-				cardDetail.setDataShareUrl(dataShareUrl);
+				cardDetail.setEventData(eventModel.toString());
 				//Need to change to true once data correct confirmed
 				cardDetail.setIsReadyToPush(false);
 				cardDetail.setIsPushed(false);

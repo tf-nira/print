@@ -66,8 +66,8 @@ public class CardDetail {
     @Column(name = "date_of_expiry")
     private String dateOfExpiry;
     
-    @Column(name = "data_share_url")
-    private String dataShareUrl;
+    @Column(name = "event_data")
+    private String eventData;
     
     @Column(name = "is_ready_to_push")
     private Boolean isReadyToPush;
