@@ -254,8 +254,10 @@ public class PrintServiceImpl implements PrintService{
 
 	@Scheduled(cron = "${print.service.send.data.cron:0 0/3 * * * ?}")
 	public void fetchUsers() {
+		printLogger.info("Starting batch job for sending requests");
 		List<CardDetail> requests = cardDetailRepository.getUnsendRecords(fetchSize);
 		
+		printLogger.info("Picked records to send: " + requests.size());
 		requests.forEach(request -> {
 			try {
 				ObjectMapper objMapper = new ObjectMapper();
