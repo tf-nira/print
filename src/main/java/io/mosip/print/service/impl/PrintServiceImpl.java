@@ -45,11 +45,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.jaiimageio.jpeg2000.impl.J2KImageReader;
 import com.google.gson.Gson;
@@ -240,6 +242,9 @@ public class PrintServiceImpl implements PrintService{
 
 	@Value("${mosip.print.signature.filename:signature.png}")
 	private String signatureFile;
+	
+	@Value("${print.service.send.data.fetchsize:5}")
+	private Integer fetchSize;
 
 	private static final String supportedLang = "eng";
 
@@ -247,6 +252,56 @@ public class PrintServiceImpl implements PrintService{
 	@Autowired
 	private PersoServiceCaller serviceCaller;
 
+	@Scheduled(cron = "${print.service.send.data.cron:0 0/3 * * * ?}")
+	public void fetchUsers() {
+		List<CardDetail> requests = cardDetailRepository.getUnsendRecords(fetchSize);
+		
+		requests.forEach(request -> {
+			try {
+				ObjectMapper objMapper = new ObjectMapper();
+				EventModel eventModel = objMapper.readValue(request.getEventData(), EventModel.class);
+				
+				String decodedCrdential = null;
+				String credential = null;
+				
+				if (eventModel.getEvent().getDataShareUri() == null || eventModel.getEvent().getDataShareUri().isEmpty()) {
+					credential = eventModel.getEvent().getData().get("credential").toString();
+				} else {
+					String dataShareUrl = eventModel.getEvent().getDataShareUri();
+					URI dataShareUri = URI.create(dataShareUrl);
+					credential = restApiClient.getApi(dataShareUri, String.class);
+				}
+				String ecryptionPin = eventModel.getEvent().getData().get("protectionKey").toString();
+				decodedCrdential = cryptoCoreUtil.decrypt(credential);
+				Map proofMap = new HashMap<String, String>();
+				proofMap = (Map) eventModel.getEvent().getData().get("proof");
+				String sign = proofMap.get("signature").toString();
+				PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
+						eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
+						eventModel.getEvent().getTransactionId(), sign, "UIN", false, null);
+				
+				String response = serviceCaller.callPersoService(persoRequestDto);
+				
+				if (response != null && !response.trim().equalsIgnoreCase("failure")) {
+				    try {
+				        ObjectMapper mapper = new ObjectMapper();
+				        JsonNode rootNode = mapper.readTree(response);
+				        boolean isSuccess = rootNode.path("isSuccess").asBoolean(false);
+
+				        if (isSuccess) {
+				        	printLogger.info("Updating isPushed to true");
+				            request.setIsPushed(true);
+				            cardDetailRepository.save(request);
+				        }
+				    } catch (Exception e) {
+				    	printLogger.error("Failed to parse perso service response: " + e.getMessage(), e);
+				    }
+				}
+			} catch (Exception e) {
+				printLogger.error(e.getMessage() , e);
+			}
+		});
+	}
 	
 	public boolean generateCard(EventModel eventModel) {	
 
@@ -461,37 +516,41 @@ public class PrintServiceImpl implements PrintService{
 				e.printStackTrace();
 			}
 			
-			try {
-				printLogger.info("Saving card details");
-				CardDetail cardDetail = new CardDetail();
-				cardDetail.setTransactionId(persoRequestDto.getTransactionId());
-				//cardDetail.setRegId(persoRequestDto.getRegId());
-				cardDetail.setNin(persoRequestDto.getNin());
-				cardDetail.setGivenName(persoRequestDto.getGivenName());
-				cardDetail.setSurname(persoRequestDto.getSurName());
-				cardDetail.setOtherName(persoRequestDto.getOtherName());
-				cardDetail.setNationality(persoRequestDto.getNationality());
-				cardDetail.setSex(persoRequestDto.getSexCode());
-				cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
-				String prFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
-				        ? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
-				                : null);
-				String secFingerName = FingerType.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
-				        ? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
-				                : null);
-				cardDetail.setPrimaryFinger(prFingerName);
-				cardDetail.setSecondaryFinger(secFingerName);
-				cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
-				cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
-				cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
-				//Need to change to true once data correct confirmed
-				cardDetail.setIsReadyToPush(false);
-				cardDetail.setIsPushed(false);
-				cardDetail.setCreatedBy("SYSTEM");
-				cardDetail.setCrDTimes(LocalDateTime.now());
-				cardDetailRepository.save(cardDetail);
-			} catch (Exception e) {
-				printLogger.error("Error while saving data: ", e);
+			if (eventModel != null) {
+				try {
+					printLogger.info("Saving card details");
+					CardDetail cardDetail = new CardDetail();
+					cardDetail.setTransactionId(persoRequestDto.getTransactionId());
+					//cardDetail.setRegId(persoRequestDto.getRegId());
+					cardDetail.setNin(persoRequestDto.getNin());
+					cardDetail.setGivenName(persoRequestDto.getGivenName());
+					cardDetail.setSurname(persoRequestDto.getSurName());
+					cardDetail.setOtherName(persoRequestDto.getOtherName());
+					cardDetail.setNationality(persoRequestDto.getNationality());
+					cardDetail.setSex(persoRequestDto.getSexCode());
+					cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
+					String prFingerName = FingerType
+							.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
+									? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
+									: null);
+					String secFingerName = FingerType
+							.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
+									? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
+									: null);
+					cardDetail.setPrimaryFinger(prFingerName);
+					cardDetail.setSecondaryFinger(secFingerName);
+					cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
+					cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
+					cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
+					//Need to change to true once data correct confirmed
+					cardDetail.setIsReadyToPush(false);
+					cardDetail.setIsPushed(false);
+					cardDetail.setCreatedBy("SYSTEM");
+					cardDetail.setCrDTimes(LocalDateTime.now());
+					cardDetailRepository.save(cardDetail);
+				} catch (Exception e) {
+					printLogger.error("Error while saving data: ", e);
+				}
 			}
 			
 			//printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
