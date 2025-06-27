@@ -421,7 +421,8 @@ public class PrintServiceImpl implements PrintService{
 			String gender = getAttribute(decryptedJson, "gender");
 			persoRequestDto.setSexCode((gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("M")) ? "M" : "F");
 			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
-			persoRequestDto.setExternalRequestId(requestId);
+			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
+			persoRequestDto.setExternalRequestId(registrationId);
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
@@ -549,6 +550,7 @@ public class PrintServiceImpl implements PrintService{
 					cardDetail.setIsPushed(false);
 					cardDetail.setCreatedBy("SYSTEM");
 					cardDetail.setCrDTimes(LocalDateTime.now());
+					cardDetail.setRegId(persoRequestDto.getExternalRequestId());
 					cardDetailRepository.save(cardDetail);
 				} catch (Exception e) {
 					printLogger.error("Error while saving data: ", e);
