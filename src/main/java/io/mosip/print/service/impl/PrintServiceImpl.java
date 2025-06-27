@@ -45,11 +45,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.jaiimageio.jpeg2000.impl.J2KImageReader;
 import com.google.gson.Gson;
@@ -60,6 +62,7 @@ import io.mosip.print.constant.ApiName;
 import io.mosip.print.constant.EventId;
 import io.mosip.print.constant.EventName;
 import io.mosip.print.constant.EventType;
+import io.mosip.print.constant.FingerType;
 import io.mosip.print.constant.ModuleName;
 import io.mosip.print.constant.PDFGeneratorExceptionCodeConstant;
 import io.mosip.print.constant.PlatformSuccessMessages;
@@ -82,6 +85,7 @@ import io.mosip.print.dto.PersoRequestDto;
 import io.mosip.print.dto.UpdateStatusResponseDto;
 import io.mosip.print.dto.VidRequestDto;
 import io.mosip.print.dto.VidResponseDTO;
+import io.mosip.print.entity.CardDetail;
 import io.mosip.print.exception.ApiNotAccessibleException;
 import io.mosip.print.exception.ApisResourceAccessException;
 import io.mosip.print.exception.CryptoManagerException;
@@ -99,6 +103,7 @@ import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.model.CredentialStatusEvent;
 import io.mosip.print.model.EventModel;
 import io.mosip.print.model.StatusEvent;
+import io.mosip.print.repository.CardDetailRepository;
 import io.mosip.print.service.PrintRestClientService;
 import io.mosip.print.service.PrintService;
 import io.mosip.print.service.UinCardGenerator;
@@ -223,6 +228,9 @@ public class PrintServiceImpl implements PrintService{
 	@Autowired
 	private PublisherClient<String, Object, HttpHeaders> pb;
 	
+	@Autowired
+	CardDetailRepository cardDetailRepository;
+	
 	@Value("${mosip.datashare.partner.id}")
 	private String partnerId;
 
@@ -234,6 +242,9 @@ public class PrintServiceImpl implements PrintService{
 
 	@Value("${mosip.print.signature.filename:signature.png}")
 	private String signatureFile;
+	
+	@Value("${print.service.send.data.fetchsize:5}")
+	private Integer fetchSize;
 
 	private static final String supportedLang = "eng";
 
@@ -241,6 +252,59 @@ public class PrintServiceImpl implements PrintService{
 	@Autowired
 	private PersoServiceCaller serviceCaller;
 
+	@Scheduled(cron = "${print.service.send.data.cron:0 0/3 * * * ?}")
+	public void fetchUsers() {
+		printLogger.info("Starting batch job for sending requests");
+		List<CardDetail> requests = cardDetailRepository.getUnsendRecords(fetchSize);
+		
+		printLogger.info("Picked records to send: " + requests.size());
+		requests.forEach(request -> {
+			try {
+				ObjectMapper objMapper = new ObjectMapper();
+				EventModel eventModel = objMapper.readValue(request.getEventData(), EventModel.class);
+				
+				String decodedCrdential = null;
+				String credential = null;
+				
+				if (eventModel.getEvent().getDataShareUri() == null || eventModel.getEvent().getDataShareUri().isEmpty()) {
+					credential = eventModel.getEvent().getData().get("credential").toString();
+				} else {
+					String dataShareUrl = eventModel.getEvent().getDataShareUri();
+					URI dataShareUri = URI.create(dataShareUrl);
+					credential = restApiClient.getApi(dataShareUri, String.class);
+				}
+				String ecryptionPin = eventModel.getEvent().getData().get("protectionKey").toString();
+				decodedCrdential = cryptoCoreUtil.decrypt(credential);
+				Map proofMap = new HashMap<String, String>();
+				proofMap = (Map) eventModel.getEvent().getData().get("proof");
+				String sign = proofMap.get("signature").toString();
+				String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
+				PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
+						eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
+						eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId);
+				
+				String response = serviceCaller.callPersoService(persoRequestDto);
+				
+				if (response != null && !response.trim().equalsIgnoreCase("failure")) {
+				    try {
+				        ObjectMapper mapper = new ObjectMapper();
+				        JsonNode rootNode = mapper.readTree(response);
+				        boolean isSuccess = rootNode.path("isSuccess").asBoolean(false);
+
+				        if (isSuccess) {
+				        	printLogger.info("Updating isPushed to true");
+				            request.setIsPushed(true);
+				            cardDetailRepository.save(request);
+				        }
+				    } catch (Exception e) {
+				    	printLogger.error("Failed to parse perso service response: " + e.getMessage(), e);
+				    }
+				}
+			} catch (Exception e) {
+				printLogger.error(e.getMessage() , e);
+			}
+		});
+	}
 	
 	public boolean generateCard(EventModel eventModel) {	
 
@@ -261,10 +325,12 @@ public class PrintServiceImpl implements PrintService{
 			Map proofMap = new HashMap<String, String>();
 			proofMap = (Map) eventModel.getEvent().getData().get("proof");
 			String sign = proofMap.get("signature").toString();
+			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false);
-			serviceCaller.callPersoService(persoRequestDto);	
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId);
+			//Need to uncomment once data correct confirmed
+//			serviceCaller.callPersoService(persoRequestDto);	
 		}catch (Exception e){
 			printLogger.error(e.getMessage() , e);
 			return isPrinted=false;
@@ -292,7 +358,7 @@ public class PrintServiceImpl implements PrintService{
 	private PersoRequestDto getPersoRequest(String credential, String credentialType, String encryptionPin,
 			String requestId, String sign,
 			String cardType,
-			boolean isPasswordProtected) {
+			boolean isPasswordProtected, EventModel eventModel, String registrationId) {
 		printLogger.debug("PrintServiceImpl::getDocuments()::entry");
 		PersoRequestDto persoRequestDto=new PersoRequestDto();
 		String credentialSubject;
@@ -357,7 +423,7 @@ public class PrintServiceImpl implements PrintService{
 			String gender = getAttribute(decryptedJson, "gender");
 			persoRequestDto.setSexCode((gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("M")) ? "M" : "F");
 			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
-			persoRequestDto.setExternalRequestId(requestId);
+			persoRequestDto.setExternalRequestId(registrationId);
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
@@ -453,6 +519,45 @@ public class PrintServiceImpl implements PrintService{
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+			if (eventModel != null) {
+				try {
+					printLogger.info("Saving card details");
+					CardDetail cardDetail = new CardDetail();
+					cardDetail.setTransactionId(persoRequestDto.getTransactionId());
+					//cardDetail.setRegId(persoRequestDto.getRegId());
+					cardDetail.setNin(persoRequestDto.getNin());
+					cardDetail.setGivenName(persoRequestDto.getGivenName());
+					cardDetail.setSurname(persoRequestDto.getSurName());
+					cardDetail.setOtherName(persoRequestDto.getOtherName());
+					cardDetail.setNationality(persoRequestDto.getNationality());
+					cardDetail.setSex(persoRequestDto.getSexCode());
+					cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
+					String prFingerName = FingerType
+							.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
+									? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
+									: null);
+					String secFingerName = FingerType
+							.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
+									? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
+									: null);
+					cardDetail.setPrimaryFinger(prFingerName);
+					cardDetail.setSecondaryFinger(secFingerName);
+					cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
+					cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
+					cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
+					//Need to change to true once data correct confirmed
+					cardDetail.setIsReadyToPush(false);
+					cardDetail.setIsPushed(false);
+					cardDetail.setCreatedBy("SYSTEM");
+					cardDetail.setCrDTimes(LocalDateTime.now());
+					cardDetail.setRegId(persoRequestDto.getExternalRequestId());
+					cardDetailRepository.save(cardDetail);
+				} catch (Exception e) {
+					printLogger.error("Error while saving data: ", e);
+				}
+			}
+			
 			//printLogger.info("persoRequestDto in finally " + persoRequestDto.toString());
 			String eventId = "";
 			String eventName = "";
