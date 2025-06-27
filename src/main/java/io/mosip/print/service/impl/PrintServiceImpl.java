@@ -278,9 +278,10 @@ public class PrintServiceImpl implements PrintService{
 				Map proofMap = new HashMap<String, String>();
 				proofMap = (Map) eventModel.getEvent().getData().get("proof");
 				String sign = proofMap.get("signature").toString();
+				String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 				PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 						eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-						eventModel.getEvent().getTransactionId(), sign, "UIN", false, null);
+						eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId);
 				
 				String response = serviceCaller.callPersoService(persoRequestDto);
 				
@@ -324,9 +325,10 @@ public class PrintServiceImpl implements PrintService{
 			Map proofMap = new HashMap<String, String>();
 			proofMap = (Map) eventModel.getEvent().getData().get("proof");
 			String sign = proofMap.get("signature").toString();
+			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel);
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId);
 			//Need to uncomment once data correct confirmed
 //			serviceCaller.callPersoService(persoRequestDto);	
 		}catch (Exception e){
@@ -356,7 +358,7 @@ public class PrintServiceImpl implements PrintService{
 	private PersoRequestDto getPersoRequest(String credential, String credentialType, String encryptionPin,
 			String requestId, String sign,
 			String cardType,
-			boolean isPasswordProtected, EventModel eventModel) {
+			boolean isPasswordProtected, EventModel eventModel, String registrationId) {
 		printLogger.debug("PrintServiceImpl::getDocuments()::entry");
 		PersoRequestDto persoRequestDto=new PersoRequestDto();
 		String credentialSubject;
@@ -421,7 +423,6 @@ public class PrintServiceImpl implements PrintService{
 			String gender = getAttribute(decryptedJson, "gender");
 			persoRequestDto.setSexCode((gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("M")) ? "M" : "F");
 			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
-			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 			persoRequestDto.setExternalRequestId(registrationId);
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
