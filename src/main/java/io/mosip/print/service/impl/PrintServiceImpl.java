@@ -294,6 +294,8 @@ public class PrintServiceImpl implements PrintService{
 				        if (isSuccess) {
 				        	printLogger.info("Updating isPushed to true");
 				            request.setIsPushed(true);
+				            request.setUpdatedBy("SYSTEM");
+				            request.setUpdatedTimes(LocalDateTime.now());
 				            cardDetailRepository.save(request);
 				        }
 				    } catch (Exception e) {
@@ -301,7 +303,7 @@ public class PrintServiceImpl implements PrintService{
 				    }
 				}
 			} catch (Exception e) {
-				printLogger.error(e.getMessage() , e);
+				printLogger.error("Failed to send request: " + e.getMessage() , e);
 			}
 		});
 	}
@@ -525,7 +527,7 @@ public class PrintServiceImpl implements PrintService{
 					printLogger.info("Saving card details");
 					CardDetail cardDetail = new CardDetail();
 					cardDetail.setTransactionId(persoRequestDto.getTransactionId());
-					//cardDetail.setRegId(persoRequestDto.getRegId());
+					cardDetail.setRegId(registrationId);
 					cardDetail.setNin(persoRequestDto.getNin());
 					cardDetail.setGivenName(persoRequestDto.getGivenName());
 					cardDetail.setSurname(persoRequestDto.getSurName());
