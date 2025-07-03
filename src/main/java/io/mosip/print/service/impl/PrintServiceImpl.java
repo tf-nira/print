@@ -554,7 +554,7 @@ public class PrintServiceImpl implements PrintService{
 					cardDetail.setIsPushed(false);
 					cardDetail.setCreatedBy("SYSTEM");
 					cardDetail.setCrDTimes(LocalDateTime.now());
-					cardDetail.setRegId(persoRequestDto.getExternalRequestId());
+					cardDetail.setRegId(registrationId);
 					cardDetailRepository.save(cardDetail);
 				} catch (Exception e) {
 					printLogger.error("Error while saving data: ", e);
