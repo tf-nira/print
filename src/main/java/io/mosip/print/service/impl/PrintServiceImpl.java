@@ -176,9 +176,9 @@ public class PrintServiceImpl implements PrintService{
 	/** The print logger. */
 	Logger printLogger = PrintLogger.getLogger(PrintServiceImpl.class);
 
-	/** The core audit request builder. */
-	@Autowired
-	private AuditLogRequestBuilder auditLogRequestBuilder;
+//	/** The core audit request builder. */
+//	@Autowired
+//	private AuditLogRequestBuilder auditLogRequestBuilder;
 
 	/** The template generator. */
 	@Autowired
@@ -425,7 +425,8 @@ public class PrintServiceImpl implements PrintService{
 			String gender = getAttribute(decryptedJson, "gender");
 			persoRequestDto.setSexCode((gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("M")) ? "M" : "F");
 			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
-			persoRequestDto.setExternalRequestId(registrationId);
+			//persoRequestDto.setExternalRequestId(registrationId);
+			persoRequestDto.setExternalRequestId(requestId);
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
@@ -515,12 +516,12 @@ public class PrintServiceImpl implements PrintService{
 					ex.getMessage(), ex);
 
 		} finally {
-			try {
-				printLogger.info("Object mapper PersoRequestDto in finally  " + new ObjectMapper().writeValueAsString(persoRequestDto));
-			} catch (JsonProcessingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+//			try {
+//				printLogger.info("Object mapper PersoRequestDto in finally  " + new ObjectMapper().writeValueAsString(persoRequestDto));
+//			} catch (JsonProcessingException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
 			
 			if (eventModel != null) {
 				try {
@@ -553,7 +554,7 @@ public class PrintServiceImpl implements PrintService{
 					cardDetail.setIsPushed(false);
 					cardDetail.setCreatedBy("SYSTEM");
 					cardDetail.setCrDTimes(LocalDateTime.now());
-					cardDetail.setRegId(persoRequestDto.getExternalRequestId());
+					cardDetail.setRegId(registrationId);
 					cardDetailRepository.save(cardDetail);
 				} catch (Exception e) {
 					printLogger.error("Error while saving data: ", e);
@@ -583,8 +584,8 @@ public class PrintServiceImpl implements PrintService{
 			String moduleId = isTransactionSuccessful ? PlatformSuccessMessages.RPR_PRINT_SERVICE_SUCCESS.getCode()
 					: description.getCode();
 			String moduleName = ModuleName.PRINT_SERVICE.toString();
-			auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType,
-					moduleId, moduleName, uin);
+//			auditLogRequestBuilder.createAuditRequestBuilder(description.getMessage(), eventId, eventName, eventType,
+//					moduleId, moduleName, uin);
 		}
 		printLogger.debug("PrintServiceImpl::getDocuments()::exit");
 
