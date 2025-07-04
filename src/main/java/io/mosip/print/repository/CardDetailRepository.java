@@ -10,6 +10,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface CardDetailRepository extends JpaRepository<CardDetail, String> {
     
-	@Query(value ="SELECT * FROM print.card_detail c WHERE c.is_ready_to_push=true AND c.is_pushed=false LIMIT :fetchSize", nativeQuery = true)
+	@Query(value ="SELECT * FROM print.card_detail c WHERE c.is_ready_to_push=true AND c.is_pushed=false order by c.upd_dtimes LIMIT :fetchSize", nativeQuery = true)
 	public List<CardDetail> getUnsendRecords(@Param("fetchSize") Integer fetchSize);
 }
