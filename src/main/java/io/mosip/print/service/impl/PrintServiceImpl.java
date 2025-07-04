@@ -302,7 +302,7 @@ public class PrintServiceImpl implements PrintService{
 			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId);
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId, true);
 
 			String response = serviceCaller.callPersoService(persoRequestDto);
 
@@ -351,7 +351,7 @@ public class PrintServiceImpl implements PrintService{
 			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId);
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, false);
 			//Need to uncomment once data correct confirmed
 //			serviceCaller.callPersoService(persoRequestDto);	
 		}catch (Exception e){
@@ -381,7 +381,7 @@ public class PrintServiceImpl implements PrintService{
 	private PersoRequestDto getPersoRequest(String credential, String credentialType, String encryptionPin,
 			String requestId, String sign,
 			String cardType,
-			boolean isPasswordProtected, EventModel eventModel, String registrationId) {
+			boolean isPasswordProtected, EventModel eventModel, String registrationId, boolean isBioExtractionRequired) {
 		printLogger.debug("PrintServiceImpl::getDocuments()::entry");
 		PersoRequestDto persoRequestDto=new PersoRequestDto();
 		String credentialSubject;
@@ -461,14 +461,14 @@ public class PrintServiceImpl implements PrintService{
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
 			if (faceCbeff != null) {
-				persoBiometricsDto.setFaceImagePortrait(getExtractedBiometrics(faceCbeff, "Face", null, true));
+				persoBiometricsDto.setFaceImagePortrait(getExtractedBiometrics(faceCbeff, "Face", null, true, isBioExtractionRequired));
 			} else {
 				persoBiometricsDto.setFaceImagePortrait(null);
 			}
 			String irisCbeff = getString(decryptedJson, "Iris");
 			if (irisCbeff != null) {
-				persoBiometricsDto.setLeftIris(getExtractedBiometrics(irisCbeff, "Iris", "Left", false));
-				persoBiometricsDto.setRightIris(getExtractedBiometrics(irisCbeff, "Iris", "Right", false));
+				persoBiometricsDto.setLeftIris(getExtractedBiometrics(irisCbeff, "Iris", "Left", false, isBioExtractionRequired));
+				persoBiometricsDto.setRightIris(getExtractedBiometrics(irisCbeff, "Iris", "Right", false, isBioExtractionRequired));
 			} else {
 				persoBiometricsDto.setLeftIris(null);
 				persoBiometricsDto.setRightIris(null);
@@ -491,7 +491,7 @@ public class PrintServiceImpl implements PrintService{
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
 						Long fingersIndex = (Long) jsonObject.get("fingersIndex");
 		               String fingerPrint = (String) jsonObject.get("fingerPrint");
-						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
+						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false, isBioExtractionRequired);
 						FingerPrintDto fingerPrintDto = new FingerPrintDto();
 						if (rawFinger != null) {
 							fingerPrintDto.setIndex(fingersIndex.intValue());
@@ -500,13 +500,16 @@ public class PrintServiceImpl implements PrintService{
 							fingerPrintDto.setIndex(null);
 							fingerPrintDto.setImage(null);
 						}
+				 		if(!isBioExtractionRequired) {
+							fingerPrintDto.setIndex(fingersIndex.intValue());
+						}
 						persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 				}
 		    	 if(jsonArray.get(1)!=null) {
 		    		 JSONObject jsonObject = (JSONObject) jsonArray.get(1);
 						Long fingersIndex = (Long) jsonObject.get("fingersIndex");
 						String fingerPrint = (String) jsonObject.get("fingerPrint");
-						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false);
+						String rawFinger = getExtractedBiometrics(fingerPrint, "Finger", null, false, isBioExtractionRequired);
 						FingerPrintDto fingerPrintDto = new FingerPrintDto();
 						if (rawFinger != null) {
 							fingerPrintDto.setIndex(fingersIndex.intValue());
@@ -514,6 +517,9 @@ public class PrintServiceImpl implements PrintService{
 						} else {
 							fingerPrintDto.setIndex(null);
 							fingerPrintDto.setImage(null);
+						}
+				 		if(!isBioExtractionRequired) {
+							fingerPrintDto.setIndex(fingersIndex.intValue());
 						}
 						persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
@@ -622,7 +628,7 @@ public class PrintServiceImpl implements PrintService{
     	JSONArray jsonArray = (JSONArray) parser.parse(obj.toString());
     	if(jsonArray.get(0)!=null) {
    		 JSONObject jsonObject = (JSONObject) jsonArray.get(0);
-   		  return  (String) jsonObject.get("value");
+   		  return ((String) jsonObject.get("value")).trim();
 		
 		  }
     	 }
@@ -635,7 +641,7 @@ public class PrintServiceImpl implements PrintService{
 		if (json.has(attr)) {
 			Object obj = json.get(attr);
 			if (obj != null) {
-				value = obj.toString();
+				value = obj.toString().trim();
 			}
 		}
 		return value;
@@ -728,7 +734,7 @@ public class PrintServiceImpl implements PrintService{
 	 * @throws Exception
 	 *             the exception
 	 */
-	private boolean setApplicantPhoto(String individualBio, Map<String, Object> attributes) throws Exception {
+	private boolean setApplicantPhoto(String individualBio, Map<String, Object> attributes, boolean isFaceExtractionRequired) throws Exception {
 		String value = individualBio;
 		boolean isPhotoSet = false;
 
@@ -736,7 +742,7 @@ public class PrintServiceImpl implements PrintService{
 			CbeffToBiometricUtil util = new CbeffToBiometricUtil(cbeffutil);
 			List<String> subtype = new ArrayList<>();
 			byte[] photoByte = util.getImageBytes(value, FACE, subtype);
-			if (photoByte != null) {
+			if (photoByte != null && isFaceExtractionRequired) {
 				String data = java.util.Base64.getEncoder().encodeToString(extractFaceImageData(photoByte));
 				attributes.put(APPLICANT_PHOTO, "data:image/png;base64," + data);
 				isPhotoSet = true;
@@ -764,8 +770,11 @@ public class PrintServiceImpl implements PrintService{
 		return data;
 	}
 
-	private String getExtractedBiometrics(String individualBio, String type, String subType, boolean isUpscaleRequired)
+	private String getExtractedBiometrics(String individualBio, String type, String subType, boolean isUpscaleRequired, boolean isBioExtractionRequired)
 			throws Exception {
+		if(!isBioExtractionRequired) {
+			return null;
+		}
 		String data=null;
 		Map<String, String> bdbBasedOnFinger = cbeffutil.getBDBBasedOnType(Base64.decodeBase64(individualBio), type,
 				subType);
@@ -989,8 +998,7 @@ public class PrintServiceImpl implements PrintService{
 		return parameter;
 	}
 
-	public byte[] extractFaceImageData(byte[] decodedBioValue) {
-
+	public byte[] extractFaceImageData(byte[] decodedBioValue) {		
 		try (DataInputStream din = new DataInputStream(new ByteArrayInputStream(decodedBioValue))) {
 
 			byte[] format = new byte[4];
