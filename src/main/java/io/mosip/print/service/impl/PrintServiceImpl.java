@@ -28,7 +28,12 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.imageio.ImageIO;
@@ -245,12 +250,21 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Value("${print.service.send.data.fetchsize:5}")
 	private Integer fetchSize;
+	
+	@Value("${print.service.send.data.threads.count:10}")
+	private Integer numberOfThreads;
 
 	private static final String supportedLang = "eng";
 
+	private ExecutorService executorService;
 	
 	@Autowired
 	private PersoServiceCaller serviceCaller;
+	
+	@PostConstruct
+    public void init() {
+        this.executorService = Executors.newFixedThreadPool(numberOfThreads); 
+    }
 
 	@Scheduled(cron = "${print.service.send.data.cron:0 0/3 * * * ?}")
 	public void fetchUsers() {
@@ -258,56 +272,63 @@ public class PrintServiceImpl implements PrintService{
 		List<CardDetail> requests = cardDetailRepository.getUnsendRecords(fetchSize);
 		
 		printLogger.info("Picked records to send: " + requests.size());
-		requests.forEach(request -> {
-			try {
-				ObjectMapper objMapper = new ObjectMapper();
-				EventModel eventModel = objMapper.readValue(request.getEventData(), EventModel.class);
-				
-				String decodedCrdential = null;
-				String credential = null;
-				
-				if (eventModel.getEvent().getDataShareUri() == null || eventModel.getEvent().getDataShareUri().isEmpty()) {
-					credential = eventModel.getEvent().getData().get("credential").toString();
-				} else {
-					String dataShareUrl = eventModel.getEvent().getDataShareUri();
-					URI dataShareUri = URI.create(dataShareUrl);
-					credential = restApiClient.getApi(dataShareUri, String.class);
-				}
-				String ecryptionPin = eventModel.getEvent().getData().get("protectionKey").toString();
-				decodedCrdential = cryptoCoreUtil.decrypt(credential);
-				Map proofMap = new HashMap<String, String>();
-				proofMap = (Map) eventModel.getEvent().getData().get("proof");
-				String sign = proofMap.get("signature").toString();
-				String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
-				PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
-						eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-						eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId);
-				
-				String response = serviceCaller.callPersoService(persoRequestDto);
-				
-				if (response != null && !response.trim().equalsIgnoreCase("failure")) {
-				    try {
-				        ObjectMapper mapper = new ObjectMapper();
-				        JsonNode rootNode = mapper.readTree(response);
-				        boolean isSuccess = rootNode.path("isSuccess").asBoolean(false);
-
-				        if (isSuccess) {
-				        	printLogger.info("Updating isPushed to true");
-				            request.setIsPushed(true);
-				            request.setUpdatedBy("SYSTEM");
-				            request.setUpdatedTimes(LocalDateTime.now());
-				            cardDetailRepository.save(request);
-				        }
-				    } catch (Exception e) {
-				    	printLogger.error("Failed to parse perso service response: " + e.getMessage(), e);
-				    }
-				}
-			} catch (Exception e) {
-				printLogger.error("Failed to send request: " + e.getMessage() , e);
-			}
-		});
+		requests.stream().map(request -> CompletableFuture
+				.runAsync(() -> processSingleRequest(request), executorService).exceptionally(ex -> {
+					printLogger.error("Failed to process request asynchronously: " + ex.getMessage(), ex);
+					return null; 
+				})).collect(Collectors.toList());
 	}
 	
+	private Object processSingleRequest(CardDetail request) {
+		try {
+			ObjectMapper objMapper = new ObjectMapper();
+			EventModel eventModel = objMapper.readValue(request.getEventData(), EventModel.class);
+
+			String decodedCrdential = null;
+			String credential = null;
+
+			if (eventModel.getEvent().getDataShareUri() == null || eventModel.getEvent().getDataShareUri().isEmpty()) {
+				credential = eventModel.getEvent().getData().get("credential").toString();
+			} else {
+				String dataShareUrl = eventModel.getEvent().getDataShareUri();
+				URI dataShareUri = URI.create(dataShareUrl);
+				credential = restApiClient.getApi(dataShareUri, String.class);
+			}
+			String ecryptionPin = eventModel.getEvent().getData().get("protectionKey").toString();
+			decodedCrdential = cryptoCoreUtil.decrypt(credential);
+			Map proofMap = new HashMap<String, String>();
+			proofMap = (Map) eventModel.getEvent().getData().get("proof");
+			String sign = proofMap.get("signature").toString();
+			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
+			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
+					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId);
+
+			String response = serviceCaller.callPersoService(persoRequestDto);
+
+			if (response != null && !response.trim().equalsIgnoreCase("failure")) {
+				try {
+					ObjectMapper mapper = new ObjectMapper();
+					JsonNode rootNode = mapper.readTree(response);
+					boolean isSuccess = rootNode.path("isSuccess").asBoolean(false);
+
+					if (isSuccess) {
+						printLogger.info("Updating isPushed to true");
+						request.setIsPushed(true);
+						request.setUpdatedBy("SYSTEM");
+						request.setUpdatedTimes(LocalDateTime.now());
+						cardDetailRepository.save(request);
+					}
+				} catch (Exception e) {
+					printLogger.error("Failed to parse perso service response: " + e.getMessage(), e);
+				}
+			}
+		} catch (Exception e) {
+			printLogger.error("Failed to send request: " + e.getMessage(), e);
+		}
+		return true;
+	}
+
 	public boolean generateCard(EventModel eventModel) {	
 
 		String decodedCrdential = null;
@@ -1190,7 +1211,4 @@ public class PrintServiceImpl implements PrintService{
 		// TODO Auto-generated method stub
 		return serviceCaller.callPersoService(request);
 	}
-	
-	
-
 }
