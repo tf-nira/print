@@ -500,6 +500,9 @@ public class PrintServiceImpl implements PrintService{
 							fingerPrintDto.setIndex(null);
 							fingerPrintDto.setImage(null);
 						}
+				 		if(!isBioExtractionRequired) {
+							fingerPrintDto.setIndex(fingersIndex.intValue());
+						}
 						persoBiometricsDto.setPrimaryFingerPrint(fingerPrintDto);
 				}
 		    	 if(jsonArray.get(1)!=null) {
@@ -514,6 +517,9 @@ public class PrintServiceImpl implements PrintService{
 						} else {
 							fingerPrintDto.setIndex(null);
 							fingerPrintDto.setImage(null);
+						}
+				 		if(!isBioExtractionRequired) {
+							fingerPrintDto.setIndex(fingersIndex.intValue());
 						}
 						persoBiometricsDto.setSecondaryFingerPrint(fingerPrintDto);
 				}
