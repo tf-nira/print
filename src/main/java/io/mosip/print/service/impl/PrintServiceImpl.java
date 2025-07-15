@@ -603,6 +603,7 @@ public class PrintServiceImpl implements PrintService{
 					//Need to change to true once data correct confirmed
 					cardDetail.setIsReadyToPush(false);
 					cardDetail.setIsPushed(false);
+					cardDetail.setIsFailed(false);
 					cardDetail.setCreatedBy("SYSTEM");
 					cardDetail.setCrDTimes(LocalDateTime.now());
 					cardDetail.setRegId(registrationId);
