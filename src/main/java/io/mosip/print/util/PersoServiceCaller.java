@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -78,10 +79,22 @@ public class PersoServiceCaller {
 		headers.set("SecretKey", secretKey);
 		HttpEntity<Object> entity = new HttpEntity<>(request, headers);
 		try {
-		ResponseEntity<String> response = restTemplate.exchange(persoServiceUrl, HttpMethod.POST, entity, String.class);
-		logger.info("Calling perso service response ........" + response.getBody());
-		return response.getBody();
-		}catch (Exception e) {
+			ResponseEntity<String> response = restTemplate.exchange(persoServiceUrl, HttpMethod.POST, entity,
+					String.class);
+			logger.info("Calling perso service response ........" + response.getBody());
+			return response.getBody();
+		} catch (HttpClientErrorException e) {
+			String errorBody = e.getResponseBodyAsString();
+			if (errorBody == null || errorBody.trim().isEmpty()) {
+				logger.error("HTTP Error from perso service: status={}, error={}", 
+						e.getStatusCode(), e.getMessage());
+				return "failure";
+			} else {
+				logger.error("HTTP Error from perso service: status={}, response={}",
+	                    e.getStatusCode(), errorBody);
+				return errorBody;
+			}
+		} catch (Exception e) {
 			logger.error("Error occurred while calling the perso service " + e.getMessage());
 			return "failure";
 		}

@@ -75,6 +75,12 @@ public class CardDetail {
     @Column(name = "is_pushed")
 	private Boolean isPushed;
     
+    @Column(name = "is_failed")
+	private Boolean isFailed;
+    
+    @Column(name = "remark")
+	private String remark;
+    
     @NotNull
 	@Column(name = "cr_by")
 	private String createdBy;

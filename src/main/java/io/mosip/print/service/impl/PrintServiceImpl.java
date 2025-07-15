@@ -313,8 +313,27 @@ public class PrintServiceImpl implements PrintService{
 					boolean isSuccess = rootNode.path("isSuccess").asBoolean(false);
 
 					if (isSuccess) {
-						printLogger.info("Updating isPushed to true");
+						printLogger.info("Request sent for transaction id: " + request.getTransactionId());
 						request.setIsPushed(true);
+						request.setUpdatedBy("SYSTEM");
+						request.setUpdatedTimes(LocalDateTime.now());
+						cardDetailRepository.save(request);
+					} else {
+						String errorMessage = "";
+
+					    try {
+					        JsonNode errorsNode = rootNode.path("errors");
+					        if (errorsNode.isArray() && errorsNode.size() > 0) {
+					            JsonNode firstError = errorsNode.get(0);
+					            errorMessage = firstError.path("message").asText("");
+					            printLogger.info("Failed sending request for transaction id: {}, error: {}", request.getTransactionId(), errorMessage);
+					        }
+					    } catch (Exception e) {
+					        printLogger.error("Error while extracting error message from response: " + e.getMessage(), e);
+					    }
+					    
+						request.setIsFailed(true);
+						request.setRemark(errorMessage);
 						request.setUpdatedBy("SYSTEM");
 						request.setUpdatedTimes(LocalDateTime.now());
 						cardDetailRepository.save(request);
@@ -325,6 +344,11 @@ public class PrintServiceImpl implements PrintService{
 			}
 		} catch (Exception e) {
 			printLogger.error("Failed to send request: " + e.getMessage(), e);
+			request.setIsFailed(true);
+			request.setRemark(e.getMessage());
+			request.setUpdatedBy("SYSTEM");
+			request.setUpdatedTimes(LocalDateTime.now());
+			cardDetailRepository.save(request);
 		}
 		return true;
 	}
