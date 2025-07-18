@@ -470,8 +470,7 @@ public class PrintServiceImpl implements PrintService{
 			String gender = getAttribute(decryptedJson, "gender");
 			persoRequestDto.setSexCode((gender.equalsIgnoreCase("Male") || gender.equalsIgnoreCase("M")) ? "M" : "F");
 			persoRequestDto.setDateOfBirth(getString(decryptedJson, "dateOfBirth"));
-			//persoRequestDto.setExternalRequestId(registrationId);
-			persoRequestDto.setExternalRequestId(requestId);
+			persoRequestDto.setExternalRequestId(registrationId);
 			persoRequestDto.setTransactionId(requestId);
 			persoRequestDto.setNationalityCode("UGA");
 			persoRequestDto.setIssuingCountryCode("UGA");
