@@ -745,7 +745,7 @@ public class PrintServiceImpl implements PrintService{
 	
 	private boolean isDemographicMatch(CardDetail cardDetail, DemographicDto demo) {
 		printLogger.info("Card detail: " + cardDetail.toString() + " demo: " + demo.toString());
-	    return Objects.equals(cardDetail.getNin(), demo.getNIN())
+	    return Objects.equals(cardDetail.getNin(), demo.getNin())
 	        && Objects.equals(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
 	        && Objects.equals(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
 	        && Objects.equals(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
