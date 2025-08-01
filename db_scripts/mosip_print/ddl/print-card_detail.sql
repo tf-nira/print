@@ -21,5 +21,10 @@ CREATE TABLE print.card_detail (
     upd_by character varying(255),
     upd_dtimes TIMESTAMP,
     is_deleted BOOLEAN,
-    del_dtimes TIMESTAMP
+    del_dtimes TIMESTAMP,
+	is_failed BOOLEAN DEFAULT FALSE,
+	remark character varying
 );
+
+CREATE INDEX IF NOT EXISTS idx_card_detail_push_status ON print.card_detail (is_ready_to_push, is_pushed, upd_dtimes);
+CREATE INDEX IF NOT EXISTS INDEX idx_card_detail_nin ON print.card_detail(nin);

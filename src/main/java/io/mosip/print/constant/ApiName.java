@@ -101,5 +101,5 @@ public enum ApiName {
 
 	IDSCHEMAURL,
 
-
+	MIGRATIONUTILITYURL
 }

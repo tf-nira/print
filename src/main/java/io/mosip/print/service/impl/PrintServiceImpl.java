@@ -26,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -50,6 +52,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -73,16 +76,20 @@ import io.mosip.print.constant.PDFGeneratorExceptionCodeConstant;
 import io.mosip.print.constant.PlatformSuccessMessages;
 import io.mosip.print.constant.QrVersion;
 import io.mosip.print.core.http.RequestWrapper;
+import io.mosip.print.core.http.ResponseWrapper;
 import io.mosip.print.dto.CardNumberUpdateDto;
 import io.mosip.print.dto.CardUpdateRequestDto;
 import io.mosip.print.dto.CryptoWithPinRequestDto;
 import io.mosip.print.dto.CryptoWithPinResponseDto;
+import io.mosip.print.dto.DemographicDto;
 import io.mosip.print.dto.ErrorDTO;
 import io.mosip.print.dto.EventData;
 import io.mosip.print.dto.EventDetails;
 import io.mosip.print.dto.EventTypeDto;
 import io.mosip.print.dto.FingerPrintDto;
 import io.mosip.print.dto.JsonValue;
+import io.mosip.print.dto.NinDetailsRequest;
+import io.mosip.print.dto.NinDetailsResponse;
 import io.mosip.print.dto.PersoAddressDto;
 import io.mosip.print.dto.PersoBiometricsDto;
 import io.mosip.print.dto.PersoEnrollmenetAddressDTO;
@@ -253,6 +260,9 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Value("${print.service.send.data.threads.count:10}")
 	private Integer numberOfThreads;
+	
+	@Value("${print.service.demo.match.required:true}")
+	private Boolean isDemoMatchRequired;
 
 	private static final String supportedLang = "eng";
 
@@ -260,6 +270,8 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Autowired
 	private PersoServiceCaller serviceCaller;
+	
+	private ObjectMapper mapper = new ObjectMapper();
 	
 	@PostConstruct
     public void init() {
@@ -575,38 +587,29 @@ public class PrintServiceImpl implements PrintService{
 			
 			if (eventModel != null) {
 				try {
-					printLogger.info("Saving card details");
-					CardDetail cardDetail = new CardDetail();
-					cardDetail.setTransactionId(persoRequestDto.getTransactionId());
-					cardDetail.setRegId(registrationId);
-					cardDetail.setNin(persoRequestDto.getNin());
-					cardDetail.setGivenName(persoRequestDto.getGivenName());
-					cardDetail.setSurname(persoRequestDto.getSurName());
-					cardDetail.setOtherName(persoRequestDto.getOtherName());
-					cardDetail.setNationality(persoRequestDto.getNationality());
-					cardDetail.setSex(persoRequestDto.getSexCode());
-					cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
-					String prFingerName = FingerType
-							.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
-									? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
-									: null);
-					String secFingerName = FingerType
-							.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
-									? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
-									: null);
-					cardDetail.setPrimaryFinger(prFingerName);
-					cardDetail.setSecondaryFinger(secFingerName);
-					cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
-					cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
-					cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
-					//Need to change to true once data correct confirmed
-					cardDetail.setIsReadyToPush(false);
-					cardDetail.setIsPushed(false);
-					cardDetail.setIsFailed(false);
-					cardDetail.setCreatedBy("SYSTEM");
-					cardDetail.setCrDTimes(LocalDateTime.now());
-					cardDetail.setRegId(registrationId);
-					cardDetailRepository.save(cardDetail);
+					Optional<CardDetail> existingRecordOpt = cardDetailRepository.findByNin(persoRequestDto.getNin());
+					
+					if (existingRecordOpt.isPresent()) {
+						CardDetail existingRecord = existingRecordOpt.get();
+
+						//this logic needs to change when same nin can be issued multiple times(in case of update sent ones also we need to send again, how?)
+				        if (!existingRecord.getIsReadyToPush() && !existingRecord.getIsPushed()) {
+				        	printLogger.info("Updating existing card detail");
+					        populateCardDetail(existingRecord, persoRequestDto, registrationId, eventModel);
+					        existingRecord.setUpdatedBy("SYSTEM");
+					        existingRecord.setUpdatedTimes(LocalDateTime.now());
+					        cardDetailRepository.save(existingRecord);
+					        printLogger.info("Card detail updated");
+				        }
+					} else {
+						printLogger.info("Saving new card details");
+						CardDetail cardDetail = new CardDetail();
+						populateCardDetail(cardDetail, persoRequestDto, registrationId, eventModel);
+						cardDetail.setCreatedBy("SYSTEM");
+						cardDetail.setCrDTimes(LocalDateTime.now());
+						cardDetailRepository.save(cardDetail);
+						printLogger.info("Card details saved");
+					}
 				} catch (Exception e) {
 					printLogger.error("Error while saving data: ", e);
 				}
@@ -642,6 +645,117 @@ public class PrintServiceImpl implements PrintService{
 
 	
 		return persoRequestDto;
+	}
+	
+	private void populateCardDetail(CardDetail cardDetail, PersoRequestDto persoRequestDto, String registrationId, EventModel eventModel) throws JsonProcessingException {
+		cardDetail.setTransactionId(persoRequestDto.getTransactionId());
+		cardDetail.setRegId(registrationId);
+		cardDetail.setNin(persoRequestDto.getNin());
+		cardDetail.setGivenName(persoRequestDto.getGivenName());
+		cardDetail.setSurname(persoRequestDto.getSurName());
+		cardDetail.setOtherName(persoRequestDto.getOtherName());
+		cardDetail.setNationality(persoRequestDto.getNationality());
+		cardDetail.setSex(persoRequestDto.getSexCode());
+		cardDetail.setDateOfBirth(persoRequestDto.getDateOfBirth());
+		String prFingerName = FingerType
+				.getNameByIndex(persoRequestDto.getBiometrics().getPrimaryFingerPrint() != null
+						? persoRequestDto.getBiometrics().getPrimaryFingerPrint().getIndex()
+						: null);
+		String secFingerName = FingerType
+				.getNameByIndex(persoRequestDto.getBiometrics().getSecondaryFingerPrint() != null
+						? persoRequestDto.getBiometrics().getSecondaryFingerPrint().getIndex()
+						: null);
+		cardDetail.setPrimaryFinger(prFingerName);
+		cardDetail.setSecondaryFinger(secFingerName);
+		cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
+		cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
+		cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
+		//Need to change to true once data correct confirmed
+		cardDetail.setIsReadyToPush(isReadyToPush(cardDetail));
+		cardDetail.setIsPushed(false);
+		cardDetail.setIsFailed(false);
+	}
+	
+	private boolean isReadyToPush(CardDetail cardDetail) {
+		if (!isDemoMatchRequired) {
+			return false;
+		}
+		
+		boolean isReadyToPush = false;
+		
+		try {
+			printLogger.info("Calling migration api for demographic match");
+			RequestWrapper<NinDetailsRequest> requestWrapper = new RequestWrapper<>();
+			NinDetailsRequest request = new NinDetailsRequest();
+			request.setNin(cardDetail.getNin());
+			requestWrapper.setRequest(request);
+			
+			ResponseWrapper<?> responseWrapper;
+			NinDetailsResponse ninDetailsResponse;
+			
+			responseWrapper = (ResponseWrapper<?>)restClientService.postApi(ApiName.MIGRATIONUTILITYURL, null, null,
+					requestWrapper, ResponseWrapper.class, MediaType.APPLICATION_JSON);
+			
+			if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
+				ErrorDTO error = responseWrapper.getErrors().get(0);
+			    
+				printLogger.error("Error from migration api: " + error.getMessage());
+				
+				//New case
+				if ("Error : No data found for given nin".equalsIgnoreCase(error.getMessage())) {
+					return true;
+				} else {
+					cardDetail.setRemark("Error from migration api: " + error.getMessage());
+					return false;
+				}
+			}
+			
+			if (responseWrapper.getResponse() != null) {
+				ninDetailsResponse = mapper.convertValue(responseWrapper.getResponse(), NinDetailsResponse.class);
+				
+				printLogger.info("Received response from migration api");
+				
+				if (ninDetailsResponse != null && ninDetailsResponse.getDemographics() != null) {
+					isReadyToPush = isDemographicMatch(cardDetail, ninDetailsResponse.getDemographics());
+					String regId = cardDetail.getRegId();
+					
+					if (isReadyToPush) {
+						if (regId != null && regId.length() == 13) {
+							isReadyToPush = false;
+							cardDetail.setRemark("Face check");
+						}
+					} else {
+						cardDetail.setRemark("Incorrect demographics");
+						
+						if (regId != null && regId.length() == 13) {
+							cardDetail.setRemark("Incorrect demographics and Face check");
+						}
+					}
+					
+					printLogger.info("Demographic comparison done");
+				}
+			}
+		} catch (Exception e) {
+			printLogger.error("Error while calling migration api: " + e.getMessage());
+			cardDetail.setRemark("Migration api call failed: " + e.getMessage());
+		}
+		
+		return isReadyToPush;
+	}
+	
+	private boolean isDemographicMatch(CardDetail cardDetail, DemographicDto demo) {
+	    return Objects.equals(cardDetail.getNin(), demo.getNIN())
+	        && Objects.equals(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
+	        && Objects.equals(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
+	        && Objects.equals(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
+	        && Objects.equals(cardDetail.getSex(), getFirstValue(demo.getGender()))
+	        && Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
+	}
+	
+	private String getFirstValue(JsonValue[] values) {
+		return (values != null && values.length > 0 && values[0].getValue() != null)
+		        ? values[0].getValue().trim()
+		        : null;
 	}
 
 	private String getAttribute(org.json.JSONObject  json, String attr) throws ParseException {
