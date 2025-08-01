@@ -8,9 +8,9 @@ import lombok.Data;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DemographicDto {
 	private String NIN;
-	private JsonValue[] givenName;
-	private JsonValue[] surname;
-	private JsonValue[] otherNames;
-	private JsonValue[] gender;
+	private String givenName;
+	private String surname;
+	private String otherNames;
+	private String gender;
 	private String dateOfBirth;
 }

@@ -752,10 +752,20 @@ public class PrintServiceImpl implements PrintService{
 	        && Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
 	}
 	
-	private String getFirstValue(JsonValue[] values) {
-		return (values != null && values.length > 0 && values[0].getValue() != null)
-		        ? values[0].getValue().trim()
-		        : null;
+	private String getFirstValue(String jsonArrayAsString) {
+		if (jsonArrayAsString == null || jsonArrayAsString.trim().isEmpty()) {
+	        return null;
+	    }
+		
+	    try {
+	        JsonValue[] values = mapper.readValue(jsonArrayAsString, JsonValue[].class);
+	        if (values != null && values.length > 0 && values[0].getValue() != null) {
+	            return values[0].getValue().trim();
+	        }
+	    } catch (Exception e) {
+	        printLogger.error("Failed to parse JsonValue array: {}", e.getMessage());
+	    }
+	    return null;
 	}
 
 	private String getAttribute(org.json.JSONObject  json, String attr) throws ParseException {
