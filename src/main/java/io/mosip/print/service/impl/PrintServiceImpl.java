@@ -754,7 +754,7 @@ public class PrintServiceImpl implements PrintService{
 	
 	private String getFirstValue(String jsonArrayAsString) {
 		if (jsonArrayAsString == null || jsonArrayAsString.trim().isEmpty()) {
-	        return null;
+	        return "";
 	    }
 		
 	    try {
@@ -765,7 +765,7 @@ public class PrintServiceImpl implements PrintService{
 	    } catch (Exception e) {
 	        printLogger.error("Failed to parse JsonValue array: {}", e.getMessage());
 	    }
-	    return null;
+	    return "";
 	}
 
 	private String getAttribute(org.json.JSONObject  json, String attr) throws ParseException {
