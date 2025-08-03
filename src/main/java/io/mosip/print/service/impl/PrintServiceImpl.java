@@ -594,12 +594,15 @@ public class PrintServiceImpl implements PrintService{
 
 						//this logic needs to change when same nin can be issued multiple times(in case of update sent ones also we need to send again, how?)
 				        if (!existingRecord.getIsReadyToPush() && !existingRecord.getIsPushed()) {
-				        	printLogger.info("Updating existing card detail");
-					        populateCardDetail(existingRecord, persoRequestDto, registrationId, eventModel);
-					        existingRecord.setUpdatedBy("SYSTEM");
-					        existingRecord.setUpdatedTimes(LocalDateTime.now());
-					        cardDetailRepository.save(existingRecord);
-					        printLogger.info("Card detail updated");
+				        	printLogger.info("Deleting existing card detail");
+				        	cardDetailRepository.delete(existingRecord);
+				        	
+				        	CardDetail newRecord = new CardDetail();
+					        populateCardDetail(newRecord, persoRequestDto, registrationId, eventModel);
+					        newRecord.setCreatedBy("SYSTEM");
+					        newRecord.setCrDTimes(LocalDateTime.now());
+							cardDetailRepository.save(newRecord);
+					        printLogger.info("New card detail saved");
 				        }
 					} else {
 						printLogger.info("Saving new card details");
