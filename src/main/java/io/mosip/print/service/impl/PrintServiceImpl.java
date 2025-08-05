@@ -263,6 +263,9 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Value("${print.service.demo.match.required:true}")
 	private Boolean isDemoMatchRequired;
+	
+	@Value("#{T(java.util.Arrays).asList('${print.service.legacy.check.process-names:RENEWAL}')}")
+	private List<String> legacyCheckProcess;
 
 	private static final String supportedLang = "eng";
 
@@ -587,23 +590,10 @@ public class PrintServiceImpl implements PrintService{
 			
 			if (eventModel != null) {
 				try {
-					Optional<CardDetail> existingRecordOpt = cardDetailRepository.findByNin(persoRequestDto.getNin());
+					Optional<CardDetail> existingRecordOpt = cardDetailRepository.findByNinAndRegId(persoRequestDto.getNin(), registrationId);
 					
 					if (existingRecordOpt.isPresent()) {
-						CardDetail existingRecord = existingRecordOpt.get();
-
-						//this logic needs to change when same nin can be issued multiple times(in case of update sent ones also we need to send again, how?)
-				        if (!existingRecord.getIsReadyToPush() && !existingRecord.getIsPushed()) {
-				        	printLogger.info("Deleting existing card detail");
-				        	cardDetailRepository.delete(existingRecord);
-				        	
-				        	CardDetail newRecord = new CardDetail();
-					        populateCardDetail(newRecord, persoRequestDto, registrationId, eventModel);
-					        newRecord.setCreatedBy("SYSTEM");
-					        newRecord.setCrDTimes(LocalDateTime.now());
-							cardDetailRepository.save(newRecord);
-					        printLogger.info("New card detail saved");
-				        }
+						printLogger.info("Card detail already exists for NIN and registrationId. Skipping insert.");
 					} else {
 						printLogger.info("Saving new card details");
 						CardDetail cardDetail = new CardDetail();
@@ -673,15 +663,16 @@ public class PrintServiceImpl implements PrintService{
 		cardDetail.setDateOfIssue(persoRequestDto.getDateOfIssuance());
 		cardDetail.setDateOfExpiry(persoRequestDto.getDateOfExpiry());
 		cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
+		String process = (String) eventModel.getEvent().getData().get("registrationType");
 		//Need to change to true once data correct confirmed
-		cardDetail.setIsReadyToPush(isReadyToPush(cardDetail));
+		cardDetail.setIsReadyToPush(isReadyToPush(cardDetail, process));
 		cardDetail.setIsPushed(false);
 		cardDetail.setIsFailed(false);
 	}
 	
-	private boolean isReadyToPush(CardDetail cardDetail) {
-		if (!isDemoMatchRequired) {
-			return false;
+	private boolean isReadyToPush(CardDetail cardDetail, String process) {
+		if (!isDemoMatchRequired || !legacyCheckProcess.contains(process)) {
+			return true;
 		}
 		
 		boolean isReadyToPush = false;
