@@ -671,7 +671,7 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
-		if (!isDemoMatchRequired || !legacyCheckProcess.contains(process)) {
+		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
 			return true;
 		}
 		
