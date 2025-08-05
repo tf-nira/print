@@ -264,7 +264,7 @@ public class PrintServiceImpl implements PrintService{
 	@Value("${print.service.demo.match.required:true}")
 	private Boolean isDemoMatchRequired;
 	
-	@Value("#{T(java.util.Arrays).asList('${print.service.legacy.check.process-names:RENEWAL}')}")
+	@Value("#{T(java.util.Arrays).asList('${print.service.legacy.check.process-names:RENEWAL,MIGRATOR}')}")
 	private List<String> legacyCheckProcess;
 
 	private static final String supportedLang = "eng";
