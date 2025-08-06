@@ -27,4 +27,4 @@ CREATE TABLE print.card_detail (
 );
 
 CREATE INDEX IF NOT EXISTS idx_card_detail_push_status ON print.card_detail (is_ready_to_push, is_pushed, upd_dtimes);
-CREATE INDEX IF NOT EXISTS idx_card_detail_nin ON print.card_detail(nin);
+CREATE INDEX IF NOT EXISTS idx_card_detail_nin_regid ON print.card_detail(nin, reg_id);
