@@ -55,6 +55,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -282,9 +283,9 @@ public class PrintServiceImpl implements PrintService{
     }
 
 	@Scheduled(cron = "${print.service.send.data.cron:0 0/3 * * * ?}")
-	public void fetchUsers() {
+	public void sendRecords() {
 		printLogger.info("Starting batch job for sending requests");
-		List<CardDetail> requests = cardDetailRepository.getUnsendRecords(fetchSize);
+		List<CardDetail> requests = fetchUnsentRecords(fetchSize);
 		
 		printLogger.info("Picked records to send: " + requests.size());
 		requests.stream().map(request -> CompletableFuture
@@ -292,6 +293,19 @@ public class PrintServiceImpl implements PrintService{
 					printLogger.error("Failed to process request asynchronously: " + ex.getMessage(), ex);
 					return null; 
 				})).collect(Collectors.toList());
+	}
+	
+	@Transactional
+	private List<CardDetail> fetchUnsentRecords(int fetchSize) {
+	    List<CardDetail> records = cardDetailRepository.getUnsendRecords(fetchSize);
+
+	    List<String> ids = records.stream().map(CardDetail::getTransactionId).collect(Collectors.toList());
+
+	    if (!ids.isEmpty()) {
+	        cardDetailRepository.markAsProcessing(ids);
+	    }
+
+	    return records;
 	}
 	
 	private Object processSingleRequest(CardDetail request) {
@@ -329,6 +343,7 @@ public class PrintServiceImpl implements PrintService{
 
 					if (isSuccess) {
 						printLogger.info("Request sent for transaction id: " + request.getTransactionId());
+						request.setIsProcessing(false);
 						request.setIsPushed(true);
 						request.setUpdatedBy("SYSTEM");
 						request.setUpdatedTimes(LocalDateTime.now());
@@ -347,6 +362,7 @@ public class PrintServiceImpl implements PrintService{
 					        printLogger.error("Error while extracting error message from response: " + e.getMessage(), e);
 					    }
 					    
+					    request.setIsProcessing(false);
 						request.setIsFailed(true);
 						request.setRemark(errorMessage);
 						request.setUpdatedBy("SYSTEM");
@@ -359,6 +375,7 @@ public class PrintServiceImpl implements PrintService{
 			}
 		} catch (Exception e) {
 			printLogger.error("Failed to send request: " + e.getMessage(), e);
+			request.setIsProcessing(false);
 			request.setIsFailed(true);
 			request.setRemark(e.getMessage());
 			request.setUpdatedBy("SYSTEM");

@@ -81,6 +81,9 @@ public class CardDetail {
     @Column(name = "remark")
 	private String remark;
     
+    @Column(name = "is_processing")
+	private Boolean isProcessing;
+    
     @NotNull
 	@Column(name = "cr_by")
 	private String createdBy;
