@@ -363,6 +363,13 @@ public class PrintServiceImpl implements PrintService{
 				} catch (Exception e) {
 					printLogger.error("Failed to parse perso service response: " + e.getMessage(), e);
 				}
+			} else {
+				request.setIsProcessing(false);
+				request.setIsFailed(true);
+				request.setRemark("Error while sending to perso");
+				request.setUpdatedBy("SYSTEM");
+				request.setUpdatedTimes(LocalDateTime.now());
+				cardDetailRepository.save(request);
 			}
 		} catch (Exception e) {
 			printLogger.error("Failed to send request: " + e.getMessage(), e);
