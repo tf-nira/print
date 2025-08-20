@@ -296,7 +296,7 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	@Transactional
-	private List<CardDetail> fetchUnsentRecords(int fetchSize) {
+	public List<CardDetail> fetchUnsentRecords(int fetchSize) {
 	    List<CardDetail> records = cardDetailRepository.getUnsendRecords(fetchSize);
 
 	    List<String> ids = records.stream().map(CardDetail::getTransactionId).collect(Collectors.toList());
