@@ -78,6 +78,7 @@ import io.mosip.print.constant.PlatformSuccessMessages;
 import io.mosip.print.constant.QrVersion;
 import io.mosip.print.core.http.RequestWrapper;
 import io.mosip.print.core.http.ResponseWrapper;
+import io.mosip.print.dao.CardDetailDao;
 import io.mosip.print.dto.CardNumberUpdateDto;
 import io.mosip.print.dto.CardUpdateRequestDto;
 import io.mosip.print.dto.CryptoWithPinRequestDto;
@@ -275,6 +276,9 @@ public class PrintServiceImpl implements PrintService{
 	@Autowired
 	private PersoServiceCaller serviceCaller;
 	
+	@Autowired
+	private CardDetailDao cardDetailDao;
+	
 	private ObjectMapper mapper = new ObjectMapper();
 	
 	@PostConstruct
@@ -285,7 +289,7 @@ public class PrintServiceImpl implements PrintService{
 	@Scheduled(cron = "${print.service.send.data.cron:0 0/3 * * * ?}")
 	public void sendRecords() {
 		printLogger.info("Starting batch job for sending requests");
-		List<CardDetail> requests = fetchUnsentRecords(fetchSize);
+		List<CardDetail> requests = cardDetailDao.fetchUnsentRecords(fetchSize);
 		
 		printLogger.info("Picked records to send: " + requests.size());
 		requests.stream().map(request -> CompletableFuture
@@ -293,19 +297,6 @@ public class PrintServiceImpl implements PrintService{
 					printLogger.error("Failed to process request asynchronously: " + ex.getMessage(), ex);
 					return null; 
 				})).collect(Collectors.toList());
-	}
-	
-	@Transactional
-	public List<CardDetail> fetchUnsentRecords(int fetchSize) {
-	    List<CardDetail> records = cardDetailRepository.getUnsendRecords(fetchSize);
-
-	    List<String> ids = records.stream().map(CardDetail::getTransactionId).collect(Collectors.toList());
-
-	    if (!ids.isEmpty()) {
-	        cardDetailRepository.markAsProcessing(ids);
-	    }
-
-	    return records;
 	}
 	
 	private Object processSingleRequest(CardDetail request) {
