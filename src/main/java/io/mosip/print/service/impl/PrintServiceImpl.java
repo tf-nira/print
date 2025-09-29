@@ -757,7 +757,7 @@ public class PrintServiceImpl implements PrintService{
 	        && Objects.equals(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
 	        && Objects.equals(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
 	        && Objects.equals(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
-	        && Objects.equals(cardDetail.getSex(), getFirstValue(demo.getGender()))
+	        && Objects.equals(cardDetail.getSex(), getFirstValue(demo.getGender()).equals("Male") ? "M" : "F")
 	        && Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
 	}
 	
