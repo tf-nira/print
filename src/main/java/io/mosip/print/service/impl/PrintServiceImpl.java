@@ -41,6 +41,12 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 
+import com.google.gson.JsonArray;
+import io.mosip.print.constant.*;
+import io.mosip.print.dto.*;
+import io.mosip.print.entity.NotificationStatus;
+import io.mosip.print.repository.NotificationStatusRepository;
+import io.mosip.print.service.NotificationService;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
@@ -67,38 +73,9 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import io.mosip.kernel.core.websub.spi.PublisherClient;
-import io.mosip.print.constant.ApiName;
-import io.mosip.print.constant.EventId;
-import io.mosip.print.constant.EventName;
-import io.mosip.print.constant.EventType;
-import io.mosip.print.constant.FingerType;
-import io.mosip.print.constant.ModuleName;
-import io.mosip.print.constant.PDFGeneratorExceptionCodeConstant;
-import io.mosip.print.constant.PlatformSuccessMessages;
-import io.mosip.print.constant.QrVersion;
 import io.mosip.print.core.http.RequestWrapper;
 import io.mosip.print.core.http.ResponseWrapper;
 import io.mosip.print.dao.CardDetailDao;
-import io.mosip.print.dto.CardNumberUpdateDto;
-import io.mosip.print.dto.CardUpdateRequestDto;
-import io.mosip.print.dto.CryptoWithPinRequestDto;
-import io.mosip.print.dto.CryptoWithPinResponseDto;
-import io.mosip.print.dto.DemographicDto;
-import io.mosip.print.dto.ErrorDTO;
-import io.mosip.print.dto.EventData;
-import io.mosip.print.dto.EventDetails;
-import io.mosip.print.dto.EventTypeDto;
-import io.mosip.print.dto.FingerPrintDto;
-import io.mosip.print.dto.JsonValue;
-import io.mosip.print.dto.NinDetailsRequest;
-import io.mosip.print.dto.NinDetailsResponse;
-import io.mosip.print.dto.PersoAddressDto;
-import io.mosip.print.dto.PersoBiometricsDto;
-import io.mosip.print.dto.PersoEnrollmenetAddressDTO;
-import io.mosip.print.dto.PersoRequestDto;
-import io.mosip.print.dto.UpdateStatusResponseDto;
-import io.mosip.print.dto.VidRequestDto;
-import io.mosip.print.dto.VidResponseDTO;
 import io.mosip.print.entity.CardDetail;
 import io.mosip.print.exception.ApiNotAccessibleException;
 import io.mosip.print.exception.ApisResourceAccessException;
@@ -269,6 +246,24 @@ public class PrintServiceImpl implements PrintService{
 	@Value("#{T(java.util.Arrays).asList('${print.service.legacy.check.process-names:RENEWAL,MIGRATOR}')}")
 	private List<String> legacyCheckProcess;
 
+	@Value("${mosip.print.service.delivered.email.code}")
+	private String deliveredEmailCode;
+
+	@Value("${mosip.print.service.delivered.email.subject.code}")
+	private String deliveredEmailSubjectCode;
+
+	@Value("${mosip.print.service.delivered.sms.code}")
+	private String deliveredSmsCode;
+
+	@Value("${mosip.print.service.ready.email.code}")
+	private String readyEmailCode;
+
+	@Value("${mosip.print.service.ready.email.subject.code}")
+	private String readyEmailSubjectCode;
+
+	@Value("${mosip.print.service.ready.sms.code}")
+	private String readySmsCode;
+
 	private static final String supportedLang = "eng";
 
 	private ExecutorService executorService;
@@ -278,6 +273,12 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Autowired
 	private CardDetailDao cardDetailDao;
+
+	@Autowired
+	private NotificationService notificationService;
+
+	@Autowired
+	private NotificationStatusRepository notificationStatusRepository;
 	
 	private ObjectMapper mapper = new ObjectMapper();
 	
@@ -1283,6 +1284,20 @@ public class PrintServiceImpl implements PrintService{
 			try {
 				printCardNumberUpdate(cardUpdateInput);
 				response.setSuccess(true);
+
+				if (Objects.equals(cardUpdateInput.getEvent().getStatus(), "DELIVERED") || Objects.equals(cardUpdateInput.getEvent().getStatus(), "READY_FOR_DELIVERY")) {
+					NotificationStatus notificationStatus = new NotificationStatus();
+					notificationStatus.setNin(cardUpdateInput.getEvent().getNin());
+					notificationStatus.setTopic(cardUpdateInput.getEvent().getStatus());
+					notificationStatus.setCrDTimes(LocalDateTime.now());
+					notificationStatusRepository.save(notificationStatus);
+
+					Map<String, Object> attributes = new HashMap<>();
+					attributes.put("district", cardUpdateInput.getEvent().getDistrict());
+					attributes.put("county", cardUpdateInput.getEvent().getCounty());
+					attributes.put("issuanceDate", cardUpdateInput.getEvent().getIssuanceDate());
+					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
+				}
 			} catch (Exception e) {
 				error = new ErrorDTO();
 				error.setErrorCode("500");
@@ -1375,5 +1390,77 @@ public class PrintServiceImpl implements PrintService{
 	public String callPersoService(PersoRequestDto request) {
 		// TODO Auto-generated method stub
 		return serviceCaller.callPersoService(request);
+	}
+
+	private boolean sendNotification(String nin, String topic, Map<String, Object> attributes) {
+		boolean emailSent = false;
+		boolean smsSent = false;
+
+		try {
+
+			// set template code
+			String emailSubjectTemplateTypeCode = "";
+			String emailTemplateTypeCode = "";
+			String smsTemplateTypeCode = "";
+
+			if (topic.equals("DELIVERED")) {
+				emailSubjectTemplateTypeCode = deliveredEmailSubjectCode;
+				emailTemplateTypeCode = deliveredEmailCode;
+				smsTemplateTypeCode = deliveredSmsCode;
+			} else if (topic.equals("READY_FOR_DELIVERY")) {
+				emailSubjectTemplateTypeCode = readyEmailSubjectCode;
+				emailTemplateTypeCode = readyEmailCode;
+				smsTemplateTypeCode = readySmsCode;
+			}
+
+			// fetch identityJson
+			JSONObject identityJson = utilities.retrieveIdrepoResponseObjWithNIN(nin);
+
+			// set attributes
+			String surname = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "surname")).get(0), "value");
+			String givenName = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "givenName")).get(0), "value");
+			String maskedNin = "*******" + nin.substring(7, 14);
+			attributes.put("surname", surname);
+			attributes.put("givenName", givenName);
+			attributes.put("maskedNin",maskedNin );
+
+			// send notification
+			String email = JsonUtil.getJSONValue(identityJson, "email");
+			String phoneNo = JsonUtil.getJSONValue(identityJson, "phone");
+
+			if (email != null) {
+				try {
+					EmailResponseDTO emailResp = notificationService.sendEmail(emailTemplateTypeCode, emailSubjectTemplateTypeCode, attributes, email);
+					if (emailResp.getStatus().equals("success")) emailSent = true;
+				} catch (Exception e) {
+                    printLogger.error("Failed to send Email notification for {} for the topic {}. Exception: {}", nin, topic, e.getMessage());
+                }
+            } else emailSent = true;
+
+			String countryCode = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "CountryCode")).get(0), "value");
+			if (phoneNo != null && countryCode != null && "Uganda (256)".equals(countryCode)) {
+				try {
+					SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
+					if (smsResp.getStatus().equals("success")) smsSent = true;
+				} catch (Exception e) {
+					printLogger.error("Failed to send SMS notification for {} for the topic {}. Exception: {}", nin, topic, e.getMessage());
+                }
+            } else smsSent = true;
+
+			if (emailSent && smsSent) {
+				Optional<NotificationStatus> record = notificationStatusRepository.findByNinAndTopic(nin, topic);
+				record.ifPresent(notificationStatus -> {
+					notificationStatus.setNotificationSent(true);
+					notificationStatus.setUpdatedTimes(LocalDateTime.now());
+					notificationStatusRepository.save(notificationStatus);
+				});
+			}
+
+
+		} catch (ApisResourceAccessException | IOException e) {
+			throw new RuntimeException(e);
+		}
+		return emailSent && smsSent;
+
 	}
 }

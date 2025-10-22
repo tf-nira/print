@@ -10,4 +10,7 @@ public class EventDto {
 	private String status; 
 	private String msg;
 	private String plasticCardNumber;
+	private String district;
+	private String county;
+	private String issuanceDate;
 }
