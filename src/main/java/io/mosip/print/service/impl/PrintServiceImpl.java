@@ -16,20 +16,11 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -1295,7 +1286,13 @@ public class PrintServiceImpl implements PrintService{
 					Map<String, Object> attributes = new HashMap<>();
 					attributes.put("district", cardUpdateInput.getEvent().getDistrict());
 					attributes.put("county", cardUpdateInput.getEvent().getCounty());
-					attributes.put("issuanceDate", cardUpdateInput.getEvent().getIssuanceDate());
+
+					SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+					Date date = inputFormat.parse(cardUpdateInput.getEvent().getIssuanceDate());
+					SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMM yyyy");
+					String formattedDate = outputFormat.format(date);
+
+					attributes.put("issuanceDate", formattedDate);
 					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
 				}
 			} catch (Exception e) {
