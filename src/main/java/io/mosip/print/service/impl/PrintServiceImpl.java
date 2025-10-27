@@ -1287,12 +1287,14 @@ public class PrintServiceImpl implements PrintService{
 					attributes.put("district", cardUpdateInput.getEvent().getDistrict());
 					attributes.put("county", cardUpdateInput.getEvent().getCounty());
 
-					SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
-					Date date = inputFormat.parse(cardUpdateInput.getEvent().getIssuanceDate());
-					SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMM yyyy");
-					String formattedDate = outputFormat.format(date);
-
-					attributes.put("issuanceDate", formattedDate);
+					if (cardUpdateInput.getEvent().getIssuanceDate() != null) {
+						SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
+						Date date = inputFormat.parse(cardUpdateInput.getEvent().getIssuanceDate());
+						SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMM yyyy");
+						String formattedDate = outputFormat.format(date);
+						attributes.put("issuanceDate", formattedDate);
+					}
+					
 					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
 				}
 			} catch (Exception e) {
