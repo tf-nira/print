@@ -1297,6 +1297,11 @@ public class PrintServiceImpl implements PrintService{
 					
 					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
 				}
+			} catch (java.text.ParseException e) {
+				error = new ErrorDTO();
+				error.setErrorCode("500");
+				error.setMessage("Error while publishing the data for topic " + cardUpdateInput.getTopic() + " Invalid Issuance Date format");
+				printLogger.error("Error while publishing the data for topic " + cardUpdateInput.getTopic(), e);
 			} catch (Exception e) {
 				error = new ErrorDTO();
 				error.setErrorCode("500");
