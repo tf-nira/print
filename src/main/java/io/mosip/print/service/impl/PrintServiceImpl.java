@@ -1272,20 +1272,20 @@ public class PrintServiceImpl implements PrintService{
 			}
 		}
 		if (cardUpdateInput.getTopic().equalsIgnoreCase("CARD_NUMBER_UPDATE")) {
-			try {
-				if (Objects.equals(cardUpdateInput.getEvent().getStatus(), "PRINTED")) {
+			if (Objects.equals(cardUpdateInput.getEvent().getStatus(), "PRINTED")) {
+				try {
 					printCardNumberUpdate(cardUpdateInput);
 					response.setSuccess(true);
+				} catch (Exception e) {
+					error = new ErrorDTO();
+					error.setErrorCode("500");
+					error.setMessage("Error while processing PRINTED status for topic CARD_NUMBER_UPDATE" + ": " + e.getMessage());
+					printLogger.error("Error while processing PRINTED status for topic CARD_NUMBER_UPDATE" + ": " + e);
 				}
-			} catch (Exception e) {
-				error = new ErrorDTO();
-				error.setErrorCode("500");
-				error.setMessage("Error while processing PRINTED status for topic CARD_NUMBER_UPDATE" + ": " + e.getMessage());
-				printLogger.error("Error while processing PRINTED status for topic CARD_NUMBER_UPDATE" + ": " + e);
 			}
 
-			try {
-				if (Objects.equals(cardUpdateInput.getEvent().getStatus(), "DELIVERED") || Objects.equals(cardUpdateInput.getEvent().getStatus(), "READY_FOR_DELIVERY")) {
+			if (Objects.equals(cardUpdateInput.getEvent().getStatus(), "DELIVERED") || Objects.equals(cardUpdateInput.getEvent().getStatus(), "READY_FOR_DELIVERY")) {
+				try {
 					NotificationStatus notificationStatus = new NotificationStatus();
 					notificationStatus.setNin(cardUpdateInput.getEvent().getNin());
 					notificationStatus.setTopic(cardUpdateInput.getEvent().getStatus());
@@ -1306,17 +1306,17 @@ public class PrintServiceImpl implements PrintService{
 
 					boolean isSuccess = sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
 					response.setSuccess(isSuccess);
+				} catch(java.text.ParseException e){
+					error = new ErrorDTO();
+					error.setErrorCode("500");
+					error.setMessage("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + ". Expected format: yyyy-MM-dd'T'HH:mm:ssXXX");
+					printLogger.error("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + e);
+				} catch(Exception e){
+					error = new ErrorDTO();
+					error.setErrorCode("500");
+					error.setMessage("Failed to send notification for transactionId " + cardUpdateInput.getEvent().getTransactionId() + ": " + e.getMessage());
+					printLogger.error("Failed to send notification for transactionId " + cardUpdateInput.getEvent().getTransactionId() + ": " + e);
 				}
-			} catch (java.text.ParseException e) {
-				error = new ErrorDTO();
-				error.setErrorCode("500");
-				error.setMessage("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + ". Expected format: yyyy-MM-dd'T'HH:mm:ssXXX");
-				printLogger.error("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + e);
-			} catch (Exception e) {
-				error = new ErrorDTO();
-				error.setErrorCode("500");
-				error.setMessage("Failed to send notification for NIN " + cardUpdateInput.getEvent().getNin() + ": " + e.getMessage());
-				printLogger.error("Failed to send notification for NIN " + cardUpdateInput.getEvent().getNin() + ": " + e);
 			}
 		}
 		if(!response.isSuccess() && error == null ) {
