@@ -1273,9 +1273,18 @@ public class PrintServiceImpl implements PrintService{
 		}
 		if (cardUpdateInput.getTopic().equalsIgnoreCase("CARD_NUMBER_UPDATE")) {
 			try {
-				printCardNumberUpdate(cardUpdateInput);
-				response.setSuccess(true);
+				if (Objects.equals(cardUpdateInput.getEvent().getStatus(), "PRINTED")) {
+					printCardNumberUpdate(cardUpdateInput);
+					response.setSuccess(true);
+				}
+			} catch (Exception e) {
+				error = new ErrorDTO();
+				error.setErrorCode("500");
+				error.setMessage("Error while processing PRINTED status for topic CARD_NUMBER_UPDATE" + ": " + e.getMessage());
+				printLogger.error("Error while processing PRINTED status for topic CARD_NUMBER_UPDATE" + ": " + e);
+			}
 
+			try {
 				if (Objects.equals(cardUpdateInput.getEvent().getStatus(), "DELIVERED") || Objects.equals(cardUpdateInput.getEvent().getStatus(), "READY_FOR_DELIVERY")) {
 					NotificationStatus notificationStatus = new NotificationStatus();
 					notificationStatus.setNin(cardUpdateInput.getEvent().getNin());
@@ -1294,19 +1303,20 @@ public class PrintServiceImpl implements PrintService{
 						String formattedDate = outputFormat.format(date);
 						attributes.put("issuanceDate", formattedDate);
 					}
-					
-					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
+
+					boolean isSuccess = sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
+					response.setSuccess(isSuccess);
 				}
 			} catch (java.text.ParseException e) {
 				error = new ErrorDTO();
 				error.setErrorCode("500");
-				error.setMessage("Error while publishing the data for topic " + cardUpdateInput.getTopic() + " Invalid Issuance Date format");
-				printLogger.error("Error while publishing the data for topic " + cardUpdateInput.getTopic(), e);
+				error.setMessage("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + ". Expected format: yyyy-MM-dd'T'HH:mm:ssXXX");
+				printLogger.error("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + e);
 			} catch (Exception e) {
 				error = new ErrorDTO();
 				error.setErrorCode("500");
-				error.setMessage("Error while publishing the data for topic " + cardUpdateInput.getTopic() + " "+ e.getMessage());
-				printLogger.error("Error while publishing the data for topic " + cardUpdateInput.getTopic(), e);
+				error.setMessage("Failed to send notification for NIN " + cardUpdateInput.getEvent().getNin() + ": " + e.getMessage());
+				printLogger.error("Failed to send notification for NIN " + cardUpdateInput.getEvent().getNin() + ": " + e);
 			}
 		}
 		if(!response.isSuccess() && error == null ) {
@@ -1316,6 +1326,7 @@ public class PrintServiceImpl implements PrintService{
 		}
 		if(error != null) {
 			response.setError(error);
+			response.setSuccess(false);
 		}
 		return response;
 	}
