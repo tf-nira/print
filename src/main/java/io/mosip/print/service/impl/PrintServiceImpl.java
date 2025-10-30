@@ -1304,8 +1304,8 @@ public class PrintServiceImpl implements PrintService{
 						attributes.put("issuanceDate", formattedDate);
 					}
 
-					boolean isSuccess = sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
-					response.setSuccess(isSuccess);
+					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
+					response.setSuccess(true);
 				} catch(java.text.ParseException e){
 					error = new ErrorDTO();
 					error.setErrorCode("500");
