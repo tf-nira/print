@@ -1,4 +1,4 @@
-FROM openjdk:11
+FROM syedsalman041997/openjdk-11-jre:latest
 
 ARG SOURCE
 ARG COMMIT_HASH
@@ -55,10 +55,9 @@ ARG container_user_uid=1001
 ARG container_user_gid=1001
 
 # install packages and create user
-RUN apt-get -y update \
-&& apt-get install -y unzip \
-&& groupadd -g ${container_user_gid} ${container_user_group} \
-&& useradd -u ${container_user_uid} -g ${container_user_group} -s /bin/sh -m ${container_user}
+RUN apt-get -y update && apt-get install -y unzip
+#&& groupadd -g ${container_user_gid} ${container_user_group} \
+#&& useradd -u ${container_user_uid} -g ${container_user_group} -s /bin/sh -m ${container_user}
 
 # set working directory for the user
 WORKDIR /home/${container_user}
