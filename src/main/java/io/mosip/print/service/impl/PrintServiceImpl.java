@@ -1443,7 +1443,8 @@ public class PrintServiceImpl implements PrintService{
 			String email = JsonUtil.getJSONValue(identityJson, "email");
 			String phoneNo = JsonUtil.getJSONValue(identityJson, "phone");
 
-			if (email != null) {
+			String residenceStatus = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "residenceStatus")).get(0), "value");
+			if (email != null && (residenceStatus == null || "Outside Uganda".equals(residenceStatus))) {
 				try {
 					EmailResponseDTO emailResp = notificationService.sendEmail(emailTemplateTypeCode, emailSubjectTemplateTypeCode, attributes, email);
 					if (emailResp.getStatus().equals("success")) emailSent = true;
