@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.mosip.print.idrepo.dto.ResponseDTO;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.slf4j.Logger;
@@ -262,7 +264,59 @@ public class Utilities {
 		return null;
 	}
 
+	public JSONObject retrieveIdrepoResponseObjWithNIN(String nin)
+            throws ApisResourceAccessException, JsonProcessingException {
+		if (nin != null) {
+			printLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+					"Utilities::retrieveIdrepoResponseObj()::entry");
+			List<String> pathSegments = new ArrayList<>();
+			pathSegments.add(nin.toLowerCase() + "@nin");
+			IdResponseDTO1 idResponseDto;
 
+			String typeParam = "type";
+			String typeParamValue = "all";
+			String typeIdParam = "idType";
+			String typeIdParamValue = "handle";
+
+			List<String> queryParams = new ArrayList<>();
+			queryParams.add(typeParam);
+			queryParams.add(typeIdParam);
+
+			List<Object> queryParamValues = new ArrayList<Object>();
+			queryParamValues.add(typeParamValue);
+			queryParamValues.add(typeIdParamValue);
+
+			idResponseDto = (IdResponseDTO1) restClientService.getApi(ApiName.IDREPOGETIDBYUIN, pathSegments,
+					queryParams, queryParamValues,
+					IdResponseDTO1.class);
+			printLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+					"Utilities::retrieveIdrepoDocument():: IDREPOGETIDBYUIN GET service call ended Successfully");
+
+			if (idResponseDto == null) {
+				printLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+						"Utilities::retrieveIdrepoResponseObj()::exit idResponseDto is null");
+				return null;
+			}
+			if (!idResponseDto.getErrors().isEmpty()) {
+				List<ErrorDTO> error = idResponseDto.getErrors();
+				printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+						"Utilities::retrieveIdrepoResponseObj():: error with error message "
+								+ error.get(0).getMessage());
+				throw new IdRepoAppException(error.get(0).getMessage());
+			}
+
+			String response = objMapper.writeValueAsString(idResponseDto.getResponse().getIdentity());
+
+			try {
+				return (JSONObject) new JSONParser().parse(response);
+			} catch (org.json.simple.parser.ParseException e) {
+				printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+						ExceptionUtils.getStackTrace(e));
+				throw new IdRepoAppException("Error while parsing string to JSONObject", e);
+			}
+		}
+		return null;
+	}
 
 
 
