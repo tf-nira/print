@@ -1485,7 +1485,7 @@ public class PrintServiceImpl implements PrintService{
             } else emailSent = true;
 
 			String countryCode = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "CountryCode")).get(0), "value");
-			if (phoneNo != null && (residenceStatus == null || "Inside Uganda".equals(residenceStatus)) && countryCode != null && "Uganda (256)".equals(countryCode)) {
+			if (phoneNo != null && (residenceStatus == null || "In Uganda".equals(residenceStatus)) && countryCode != null && "Uganda (256)".equals(countryCode)) {
 				try {
 					SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
 					if (smsResp.getStatus().equals("success")) smsSent = true;
