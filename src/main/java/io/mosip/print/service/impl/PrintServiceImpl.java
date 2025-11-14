@@ -228,6 +228,9 @@ public class PrintServiceImpl implements PrintService{
 	@Value("${print.service.send.data.fetchsize:5}")
 	private Integer fetchSize;
 	
+	@Value("${print.service.send.notification.fetchsize:5}")
+	private Integer notificationFetchSize;
+	
 	@Value("${print.service.send.data.threads.count:10}")
 	private Integer numberOfThreads;
 	
@@ -287,6 +290,29 @@ public class PrintServiceImpl implements PrintService{
 		requests.stream().map(request -> CompletableFuture
 				.runAsync(() -> processSingleRequest(request), executorService).exceptionally(ex -> {
 					printLogger.error("Failed to process request asynchronously: " + ex.getMessage(), ex);
+					return null; 
+				})).collect(Collectors.toList());
+	}
+	
+	@Scheduled(cron = "${print.service.send.notification.cron:0 0/3 * * * ?}")
+	public void sendNotifications() {
+		printLogger.info("Starting batch job for sending notifications");
+		List<NotificationStatus> requests = cardDetailDao.fetchUnnotifiedRecords(notificationFetchSize);
+		
+		printLogger.info("Picked records to send notifications: " + requests.size());
+		requests.stream().map(request -> CompletableFuture
+				.runAsync(() -> {
+					Map<String, Object> attributes = new HashMap<>();
+					if (request.getAttributes() != null) {
+						try {
+							attributes = mapper.readValue(request.getAttributes(), Map.class);
+						} catch (JsonProcessingException e) {
+							printLogger.error("Failed parsing attributes");
+						}
+					}
+					sendNotification(request.getNin(), request.getTopic(), attributes, request);
+				}, executorService).exceptionally(ex -> {
+					printLogger.error("Failed to send notification asynchronously: " + ex.getMessage(), ex);
 					return null; 
 				})).collect(Collectors.toList());
 	}
@@ -1290,7 +1316,6 @@ public class PrintServiceImpl implements PrintService{
 					notificationStatus.setNin(cardUpdateInput.getEvent().getNin());
 					notificationStatus.setTopic(cardUpdateInput.getEvent().getStatus());
 					notificationStatus.setCrDTimes(LocalDateTime.now());
-					notificationStatusRepository.save(notificationStatus);
 
 					Map<String, Object> attributes = new HashMap<>();
 					attributes.put("district", cardUpdateInput.getEvent().getDistrict());
@@ -1303,19 +1328,22 @@ public class PrintServiceImpl implements PrintService{
 						String formattedDate = outputFormat.format(date);
 						attributes.put("issuanceDate", formattedDate);
 					}
+					
+					notificationStatus.setAttributes(mapper.writeValueAsString(attributes));
+					notificationStatusRepository.save(notificationStatus);
 
-					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes);
+					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes, notificationStatus);
 					response.setSuccess(true);
 				} catch(java.text.ParseException e){
 					error = new ErrorDTO();
 					error.setErrorCode("500");
 					error.setMessage("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + ". Expected format: yyyy-MM-dd'T'HH:mm:ssXXX");
-					printLogger.error("Invalid Issuance Date format for topic " + cardUpdateInput.getTopic() + e);
+					printLogger.error("Invalid Issuance Date format for topic {}", cardUpdateInput.getTopic(), e);
 				} catch(Exception e){
 					error = new ErrorDTO();
 					error.setErrorCode("500");
 					error.setMessage("Failed to send notification for transactionId " + cardUpdateInput.getEvent().getTransactionId() + ": " + e.getMessage());
-					printLogger.error("Failed to send notification for transactionId " + cardUpdateInput.getEvent().getTransactionId() + ": " + e);
+					printLogger.error("Failed to send notification for transactionId {}", cardUpdateInput.getEvent().getTransactionId(),  e);
 				}
 			}
 		}
@@ -1407,12 +1435,12 @@ public class PrintServiceImpl implements PrintService{
 		return serviceCaller.callPersoService(request);
 	}
 
-	private boolean sendNotification(String nin, String topic, Map<String, Object> attributes) {
+	private boolean sendNotification(String nin, String topic, Map<String, Object> attributes, NotificationStatus notificationStatus) {
 		boolean emailSent = false;
 		boolean smsSent = false;
+		String remark = null;
 
 		try {
-
 			// set template code
 			String emailSubjectTemplateTypeCode = "";
 			String emailTemplateTypeCode = "";
@@ -1449,34 +1477,41 @@ public class PrintServiceImpl implements PrintService{
 					EmailResponseDTO emailResp = notificationService.sendEmail(emailTemplateTypeCode, emailSubjectTemplateTypeCode, attributes, email);
 					if (emailResp.getStatus().equals("success")) emailSent = true;
 				} catch (Exception e) {
-                    printLogger.error("Failed to send Email notification for {} for the topic {}. Exception: {}", nin, topic, e.getMessage());
+					remark = Optional.ofNullable(e.getLocalizedMessage())
+                            .filter(msg -> !msg.isBlank())
+                            .orElse(e.getClass().getSimpleName());
+                    printLogger.error("Failed to send Email notification for the topic {}", topic, e);
                 }
             } else emailSent = true;
 
 			String countryCode = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "CountryCode")).get(0), "value");
-			if (phoneNo != null && countryCode != null && "Uganda (256)".equals(countryCode)) {
+			if (phoneNo != null && (residenceStatus == null || "Inside Uganda".equals(residenceStatus)) && countryCode != null && "Uganda (256)".equals(countryCode)) {
 				try {
 					SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
 					if (smsResp.getStatus().equals("success")) smsSent = true;
 				} catch (Exception e) {
-					printLogger.error("Failed to send SMS notification for {} for the topic {}. Exception: {}", nin, topic, e.getMessage());
+					remark = Optional.ofNullable(e.getLocalizedMessage())
+                            .filter(msg -> !msg.isBlank())
+                            .orElse(e.getClass().getSimpleName());
+					printLogger.error("Failed to send SMS notification for the topic {}", topic, e);
                 }
             } else smsSent = true;
 
-			if (emailSent && smsSent) {
-				Optional<NotificationStatus> record = notificationStatusRepository.findByNinAndTopic(nin, topic);
-				record.ifPresent(notificationStatus -> {
-					notificationStatus.setNotificationSent(true);
-					notificationStatus.setUpdatedTimes(LocalDateTime.now());
-					notificationStatusRepository.save(notificationStatus);
-				});
-			}
-
-
-		} catch (ApisResourceAccessException | IOException e) {
+		} catch (Exception e) {
+			remark = Optional.ofNullable(e.getLocalizedMessage())
+                    .filter(msg -> !msg.isBlank())
+                    .orElse(e.getClass().getSimpleName());
 			throw new RuntimeException(e);
-		}
+		} finally {
+			if (emailSent && smsSent) {
+				notificationStatus.setNotificationSent(true);
+			} else {
+				notificationStatus.setRemark(remark);
+			}
+			notificationStatus.setIsProcessing(false);
+            notificationStatus.setUpdatedTimes(LocalDateTime.now());
+            notificationStatusRepository.save(notificationStatus);
+	    }
 		return emailSent && smsSent;
-
 	}
 }
