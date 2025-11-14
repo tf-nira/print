@@ -1330,7 +1330,7 @@ public class PrintServiceImpl implements PrintService{
 					}
 					
 					notificationStatus.setAttributes(mapper.writeValueAsString(attributes));
-					notificationStatusRepository.save(notificationStatus);
+//					notificationStatusRepository.save(notificationStatus);
 
 					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes, notificationStatus);
 					response.setSuccess(true);
@@ -1503,14 +1503,18 @@ public class PrintServiceImpl implements PrintService{
                     .orElse(e.getClass().getSimpleName());
 			throw new RuntimeException(e);
 		} finally {
-			if (emailSent && smsSent) {
-				notificationStatus.setNotificationSent(true);
-			} else {
-				notificationStatus.setRemark(remark);
-			}
-			notificationStatus.setIsProcessing(false);
-            notificationStatus.setUpdatedTimes(LocalDateTime.now());
-            notificationStatusRepository.save(notificationStatus);
+			if (remark != null && remark.contains("Invalid UIN")) {
+		        printLogger.warn("Skipping DB update for invalid NIN");
+		    } else {
+		    	if (emailSent && smsSent) {
+					notificationStatus.setNotificationSent(true);
+				} else {
+					notificationStatus.setRemark(remark);
+				}
+				notificationStatus.setIsProcessing(false);
+	            notificationStatus.setUpdatedTimes(LocalDateTime.now());
+	            notificationStatusRepository.save(notificationStatus);
+		    }
 	    }
 		return emailSent && smsSent;
 	}
