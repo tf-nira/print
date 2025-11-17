@@ -6,6 +6,7 @@ import io.mosip.print.constant.LoggerFileConstant;
 import io.mosip.print.core.http.RequestWrapper;
 import io.mosip.print.core.http.ResponseWrapper;
 import io.mosip.print.dto.EmailResponseDTO;
+import io.mosip.print.dto.ErrorDTO;
 import io.mosip.print.dto.SmsRequestDTO;
 import io.mosip.print.dto.SmsResponseDTO;
 import io.mosip.print.logger.PrintLogger;
@@ -27,6 +28,7 @@ import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -89,6 +91,14 @@ public class NotificationServiceImpl implements NotificationService {
 
             responseWrapper = (ResponseWrapper<?>) restApiClient.postApi(builder.build().toUriString(),
                     MediaType.MULTIPART_FORM_DATA, params, ResponseWrapper.class);
+            
+            if (!responseWrapper.getErrors().isEmpty()) {
+            	List<ErrorDTO> error = responseWrapper.getErrors();
+				printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+						"NotificationServiceImpl::sendEmail():: error with error message "
+								+ error.get(0).getMessage());
+				throw new Exception(error.get(0).getMessage());
+            }
 
             responseDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()), EmailResponseDTO.class);
             printLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID, "",
@@ -138,6 +148,14 @@ public class NotificationServiceImpl implements NotificationService {
             ResponseWrapper<?>responseWrapper = (ResponseWrapper<?>) restClientService.postApi(ApiName.SMSNOTIFIER, "", "",
                     requestWrapper, ResponseWrapper.class);
 
+            if (!responseWrapper.getErrors().isEmpty()) {
+            	List<ErrorDTO> error = responseWrapper.getErrors();
+				printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
+						"NotificationServiceImpl::sendSMS():: error with error message "
+								+ error.get(0).getMessage());
+				throw new Exception(error.get(0).getMessage());
+            }
+            
             responseDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()), SmsResponseDTO.class);
 
             printLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), "",
