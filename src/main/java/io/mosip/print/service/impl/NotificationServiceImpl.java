@@ -92,7 +92,7 @@ public class NotificationServiceImpl implements NotificationService {
             responseWrapper = (ResponseWrapper<?>) restApiClient.postApi(builder.build().toUriString(),
                     MediaType.MULTIPART_FORM_DATA, params, ResponseWrapper.class);
             
-            if (!responseWrapper.getErrors().isEmpty()) {
+            if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
             	List<ErrorDTO> error = responseWrapper.getErrors();
 				printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
 						"NotificationServiceImpl::sendEmail():: error with error message "
@@ -148,7 +148,7 @@ public class NotificationServiceImpl implements NotificationService {
             ResponseWrapper<?>responseWrapper = (ResponseWrapper<?>) restClientService.postApi(ApiName.SMSNOTIFIER, "", "",
                     requestWrapper, ResponseWrapper.class);
 
-            if (!responseWrapper.getErrors().isEmpty()) {
+            if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
             	List<ErrorDTO> error = responseWrapper.getErrors();
 				printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
 						"NotificationServiceImpl::sendSMS():: error with error message "
