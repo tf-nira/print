@@ -27,6 +27,15 @@ public class NotificationStatus {
     @Column(name = "notification_sent")
     private boolean notificationSent;
 
+    @Column(name = "attributes")
+    private String attributes;
+    
+    @Column(name = "remark")
+    private String remark;
+    
+    @Column(name = "is_processing")
+	private Boolean isProcessing;
+    
     @NotNull
     @Column(name = "cr_dtimes")
     private LocalDateTime crDTimes;

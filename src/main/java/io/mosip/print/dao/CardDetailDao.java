@@ -8,13 +8,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.mosip.print.entity.CardDetail;
+import io.mosip.print.entity.NotificationStatus;
 import io.mosip.print.repository.CardDetailRepository;
+import io.mosip.print.repository.NotificationStatusRepository;
 
 @Component
 public class CardDetailDao {
 
 	@Autowired
     private CardDetailRepository cardDetailRepository;
+	
+	@Autowired
+	private NotificationStatusRepository notificationStatusRepository;
 	
 	@Transactional
 	public List<CardDetail> fetchUnsentRecords(int fetchSize) {
@@ -25,6 +30,19 @@ public class CardDetailDao {
 	    if (!ids.isEmpty()) {
 	        cardDetailRepository.markAsProcessing(ids);
 	    }
+
+	    return records;
+	}
+	
+	@Transactional
+	public List<NotificationStatus> fetchUnnotifiedRecords(int fetchSize) {
+	    List<NotificationStatus> records = notificationStatusRepository.getUnnotifiedRecords(fetchSize);
+
+	    for (NotificationStatus record : records) {
+            record.setIsProcessing(true);
+        }
+
+	    notificationStatusRepository.saveAll(records);
 
 	    return records;
 	}
