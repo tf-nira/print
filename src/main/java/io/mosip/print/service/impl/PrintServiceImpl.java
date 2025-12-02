@@ -1471,12 +1471,14 @@ public class PrintServiceImpl implements PrintService{
 			String email = JsonUtil.getJSONValue(identityJson, "email");
 			String phoneNo = JsonUtil.getJSONValue(identityJson, "phone");
 
-			if (attributes.get("district") == "KAMPALA (12)") {
+			if (Objects.equals(attributes.get("district").toString(), "KAMPALA (12)")) {
 				Object countyValue = attributes.get("county");
 				if (countyValue != null) {
 					attributes.put("district", countyValue);
 				}
 			}
+
+			printLogger.info("Attributes Map for nin {} : {}", nin, attributes);
 
 			String residenceStatus = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "residenceStatus")).get(0), "value");
 			if (email != null && (residenceStatus == null || "Outside Uganda".equals(residenceStatus))) {
