@@ -1471,10 +1471,13 @@ public class PrintServiceImpl implements PrintService{
 			String email = JsonUtil.getJSONValue(identityJson, "email");
 			String phoneNo = JsonUtil.getJSONValue(identityJson, "phone");
 
-			if (Objects.equals(attributes.get("district").toString(), "KAMPALA (12)")) {
+			if (Objects.equals(String.valueOf(attributes.get("district")), "KAMPALA (12)")) {
 				Object countyValue = attributes.get("county");
 				if (countyValue != null) {
-					attributes.put("district", countyValue);
+					String district = String.valueOf(attributes.get("district"));
+					String county = String.valueOf(countyValue);
+					String newDistrict = district + " - " + county;
+					attributes.put("district", newDistrict);
 				}
 			}
 
