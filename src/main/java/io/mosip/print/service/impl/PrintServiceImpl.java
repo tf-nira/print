@@ -1330,9 +1330,9 @@ public class PrintServiceImpl implements PrintService{
 					}
 					
 					notificationStatus.setAttributes(mapper.writeValueAsString(attributes));
-//					notificationStatusRepository.save(notificationStatus);
+					notificationStatusRepository.save(notificationStatus);
 
-					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes, notificationStatus);
+//					sendNotification(cardUpdateInput.getEvent().getNin(), cardUpdateInput.getEvent().getStatus(), attributes, notificationStatus);
 					response.setSuccess(true);
 				} catch(java.text.ParseException e){
 					error = new ErrorDTO();
