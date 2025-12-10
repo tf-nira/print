@@ -39,6 +39,7 @@ import io.mosip.print.entity.NotificationStatus;
 import io.mosip.print.repository.NotificationStatusRepository;
 import io.mosip.print.service.NotificationService;
 import org.apache.commons.codec.binary.Base64;
+import org.checkerframework.checker.units.qual.C;
 import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -1529,5 +1530,39 @@ public class PrintServiceImpl implements PrintService{
 		    }
 	    }
 		return emailSent && smsSent;
+	}
+
+	public String sendCardToPersoService(String regId) {
+		List<CardDetail> cardDetails = cardDetailDao.fetchCardDetailByRegId(regId);
+		if (cardDetails != null && !cardDetails.isEmpty()) {
+			CardDetail cardDetail = cardDetails.get(0);
+
+			if (cardDetail.getIsReadyToPush() && !cardDetail.getIsProcessing() &&
+					!cardDetail.getIsPushed() && cardDetail.getRemark() == null) {
+                processSingleRequest(cardDetail);
+            }
+
+			if (cardDetail.getIsPushed()) {
+				printLogger.info("Card details pushed for regId {}", regId);
+				return CardStatusMessage.SENT.format(regId);
+			}
+
+			if (cardDetail.getIsProcessing()) {
+				printLogger.info("Card details processing is ongoing for regId {}", regId);
+				return CardStatusMessage.PROCESSING.format(regId);
+			}
+
+			if (cardDetail.getIsFailed() && cardDetail.getRemark() != null) {
+				printLogger.warn("Card details for regId {} has remark: {}", regId, cardDetail.getRemark());
+				return CardStatusMessage.FAILED.format(regId, cardDetail.getRemark());
+			}
+
+			printLogger.warn("Card Details for regId {} is invalid for sending to perso, with remark {}", regId, cardDetail.getRemark());
+			return CardStatusMessage.INTERNAL_ERROR.format();
+
+		} else {
+			printLogger.warn("No card details found for regId {}", regId);
+			return CardStatusMessage.NO_DETAILS.format(regId);
+		}
 	}
 }

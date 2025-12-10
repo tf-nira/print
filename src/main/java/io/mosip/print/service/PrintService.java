@@ -20,4 +20,6 @@ public interface PrintService {
 	public UpdateStatusResponseDto updateCardStatus(CardUpdateRequestDto cardUpdateInput);
 	
 	public String callPersoService(PersoRequestDto request);
+
+	public String sendCardToPersoService(String regId);
 }
