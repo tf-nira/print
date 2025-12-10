@@ -39,7 +39,6 @@ import io.mosip.print.entity.NotificationStatus;
 import io.mosip.print.repository.NotificationStatusRepository;
 import io.mosip.print.service.NotificationService;
 import org.apache.commons.codec.binary.Base64;
-import org.checkerframework.checker.units.qual.C;
 import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
