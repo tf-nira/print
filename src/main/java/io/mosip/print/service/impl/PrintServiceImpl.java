@@ -99,8 +99,6 @@ public class PrintServiceImpl implements PrintService{
 
 	private String topic="CREDENTIAL_STATUS_UPDATE";
 
-	private static final String SOURCE = "";
-	
 	@Autowired
 	private WebSubSubscriptionHelper webSubSubscriptionHelper;
 
@@ -1462,10 +1460,20 @@ public class PrintServiceImpl implements PrintService{
 				fields.add("residenceStatus");
 				fields.add("CountryCode");
 
+				// get reg-id, source and process
+				String regId = cardDetail.getRegId();
+				String source = null;
+
 				// get Process
 				String eventData = cardDetail.getEventData();
 				JsonNode rootNode = mapper.readTree(eventData);
 				String process = rootNode.at("/event/data/registrationType").asText();
+
+				if (regId.length() == 13)  {
+					source = "DATAMIGRATOR";
+					process = "MIGRATOR";
+				}
+				else source = "REGISTRATION_CLIENT";
 
 				// If no process in eventData, hit-and-try with all possible processes
 				if (process == null || process.isBlank()) {
@@ -1473,7 +1481,7 @@ public class PrintServiceImpl implements PrintService{
 					for (String p : processesToTry) {
 						try {
 							printLogger.info("Trying to fetch registration fields for nin {} with process {}", nin, p);
-							fieldData = utilities.getFields(cardDetail.getRegId(), fields, SOURCE, p);
+							fieldData = utilities.getFields(regId, fields, source, p);
                             break;
 						} catch (ObjectDoesnotExistsException ode) {
 							// wrong process, try next
@@ -1490,7 +1498,7 @@ public class PrintServiceImpl implements PrintService{
 					}
 				} else {
 					try {
-						fieldData = utilities.getFields(cardDetail.getRegId(), fields, SOURCE, process);
+						fieldData = utilities.getFields(regId, fields, source, process);
 					} catch (ObjectDoesnotExistsException ode) {
 						printLogger.error("No data found for nin {} and process {}", nin, process);
 						printLogger.error(ode.getMessage(), ode);
