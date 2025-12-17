@@ -1452,6 +1452,8 @@ public class PrintServiceImpl implements PrintService{
 			if (cardDetails != null && !cardDetails.isEmpty()) {
 				CardDetail cardDetail = cardDetails.get(0);
 
+				printLogger.info("Card Details fetched for nin {} : {}", nin, cardDetail);
+
 				List<String> fields = new ArrayList<>();
 				fields.add("surname");
 				fields.add("givenName");
@@ -1470,6 +1472,7 @@ public class PrintServiceImpl implements PrintService{
 					String[] processesToTry = {"RENEWAL", "UPDATE", "FIRSTID", "LOST", "NEW"};
 					for (String p : processesToTry) {
 						try {
+							printLogger.info("Trying to fetch registration fields for nin {} with process {}", nin, p);
 							fieldData = utilities.getFields(cardDetail.getRegId(), fields, SOURCE, p);
                             break;
 						} catch (ObjectDoesnotExistsException ode) {
@@ -1489,7 +1492,8 @@ public class PrintServiceImpl implements PrintService{
 					try {
 						fieldData = utilities.getFields(cardDetail.getRegId(), fields, SOURCE, process);
 					} catch (ObjectDoesnotExistsException ode) {
-						printLogger.error("No registration process found for nin {} and process {}", nin, process);
+						printLogger.error("No data found for nin {} and process {}", nin, process);
+						printLogger.error(ode.getMessage(), ode);
 					} catch (PacketManagerException pe) {
 						remark = Optional.ofNullable(pe.getLocalizedMessage())
 								.filter(msg -> !msg.isBlank())
