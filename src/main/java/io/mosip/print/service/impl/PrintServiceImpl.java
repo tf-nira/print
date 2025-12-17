@@ -1548,7 +1548,14 @@ public class PrintServiceImpl implements PrintService{
 
 			printLogger.info("Attributes Map for nin {} : {}", nin, attributes);
 
-			String residenceStatus = fieldData.get("residenceStatus");
+			String residenceStatusJson = fieldData.get("residenceStatus");
+			jsonArray = mapper.readTree(residenceStatusJson);
+			String residenceStatus = jsonArray.get(0).get("value").asText();
+
+			String countryCodeJson = fieldData.get("CountryCode");
+			jsonArray = mapper.readTree(countryCodeJson);
+			String countryCode = jsonArray.get(0).get("value").asText();
+
 			if (email != null && (residenceStatus == null || "Outside Uganda".equals(residenceStatus))) {
 				try {
 					EmailResponseDTO emailResp = notificationService.sendEmail(emailTemplateTypeCode, emailSubjectTemplateTypeCode, attributes, email);
@@ -1561,7 +1568,6 @@ public class PrintServiceImpl implements PrintService{
                 }
             } else emailSent = true;
 
-			String countryCode = fieldData.get("CountryCode");
 			if (phoneNo != null && (residenceStatus == null || "In Uganda".equals(residenceStatus)) && countryCode != null && "Uganda (256)".equals(countryCode)) {
 				try {
 					SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
