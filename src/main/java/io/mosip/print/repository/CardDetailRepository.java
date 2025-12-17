@@ -22,4 +22,6 @@ public interface CardDetailRepository extends JpaRepository<CardDetail, String> 
 	public void markAsProcessing(@Param("ids") List<String> ids);
 
 	Optional<CardDetail> findByRegId(String regId);
+
+	Optional<CardDetail> findByNin(String nin);
 }
