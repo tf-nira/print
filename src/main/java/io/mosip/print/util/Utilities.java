@@ -5,10 +5,18 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.mosip.kernel.core.util.DateUtils;
+import io.mosip.kernel.core.util.JsonUtils;
+import io.mosip.print.core.http.RequestWrapper;
+import io.mosip.print.core.http.ResponseWrapper;
+import io.mosip.print.dto.FieldDTO;
+import io.mosip.print.dto.FieldResponseDTO;
+import io.mosip.print.exception.*;
 import io.mosip.print.idrepo.dto.ResponseDTO;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -21,10 +29,6 @@ import io.mosip.print.constant.ApiName;
 import io.mosip.print.constant.LoggerFileConstant;
 import io.mosip.print.constant.MappingJsonConstants;
 import io.mosip.print.dto.ErrorDTO;
-import io.mosip.print.exception.ApisResourceAccessException;
-import io.mosip.print.exception.ExceptionUtils;
-import io.mosip.print.exception.IdRepoAppException;
-import io.mosip.print.exception.PlatformErrorMessages;
 import io.mosip.print.idrepo.dto.IdResponseDTO1;
 import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.service.PrintRestClientService;
@@ -61,6 +65,10 @@ public class Utilities {
 
 	/** The Constant NEW_PACKET. */
 	private static final String NEW_PACKET = "New-packet";
+
+	private static final String ID = "mosip.commmons.packetmanager";
+	private static final String VERSION = "v1";
+	private static final String OBJECT_DOESNOT_EXISTS_ERROR_CODE = "KER-PUT-027";
 
 	@Autowired
 	private ObjectMapper objMapper;
@@ -318,7 +326,28 @@ public class Utilities {
 		return null;
 	}
 
+	public Map<String, String> getFields(String id, List<String> fields, String source, String process) throws ApisResourceAccessException, PacketManagerException, io.mosip.kernel.core.util.exception.JsonProcessingException, IOException {
+		FieldDTO fieldDto = new FieldDTO(id, fields, source, process, false);
 
+		RequestWrapper<FieldDTO> request = new RequestWrapper<>();
+		request.setId(ID);
+		request.setVersion(VERSION);
+		request.setRequesttime(DateUtils.getUTCCurrentDateTime());
+		request.setRequest(fieldDto);
+		ResponseWrapper<FieldResponseDTO> response = (ResponseWrapper) restClientService.postApi(ApiName.PACKETMANAGER_SEARCH_FIELDS, "", "", request, ResponseWrapper.class);
 
+		if (response.getErrors() != null && response.getErrors().size() > 0) {
+			printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(), id, JsonUtils.javaObjectToJsonString(response));
+			ErrorDTO errorDTO = response.getErrors().iterator().next();
+			if (OBJECT_DOESNOT_EXISTS_ERROR_CODE.equalsIgnoreCase(errorDTO.getErrorCode()))
+				throw new ObjectDoesnotExistsException(errorDTO.getErrorCode(), errorDTO.getMessage());
+			else
+				throw new PacketManagerException(errorDTO.getErrorCode(), errorDTO.getMessage());
+		}
+
+		FieldResponseDTO fieldResponseDto = objMapper.readValue(JsonUtils.javaObjectToJsonString(response.getResponse()), FieldResponseDTO.class);
+
+		return fieldResponseDto.getFields();
+	}
 
 }

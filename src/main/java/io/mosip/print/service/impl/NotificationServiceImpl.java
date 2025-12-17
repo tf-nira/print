@@ -147,14 +147,6 @@ public class NotificationServiceImpl implements NotificationService {
 
             ResponseWrapper<?>responseWrapper = (ResponseWrapper<?>) restClientService.postApi(ApiName.SMSNOTIFIER, "", "",
                     requestWrapper, ResponseWrapper.class);
-
-            if (responseWrapper.getErrors() != null && !responseWrapper.getErrors().isEmpty()) {
-            	List<ErrorDTO> error = responseWrapper.getErrors();
-				printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.UIN.toString(), "",
-						"NotificationServiceImpl::sendSMS():: error with error message "
-								+ error.get(0).getMessage());
-				throw new Exception(error.get(0).getMessage());
-            }
             
             responseDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()), SmsResponseDTO.class);
 

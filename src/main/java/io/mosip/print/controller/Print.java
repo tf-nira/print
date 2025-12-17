@@ -10,10 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import io.mosip.kernel.websub.api.annotation.PreAuthenticateContentAndVerifyIntent;
 
@@ -68,5 +65,13 @@ public class Print {
 		boolean isPrinted = printService.generateCard(eventModel);
 		printLogger.info("printing status : {} for event id: {}",isPrinted,eventModel.getEvent().getId());
 		return new ResponseEntity<>("request accepted.", HttpStatus.OK);
+	}
+
+	@PostMapping(path = "/sendCardToPerso/{regId}")
+	public ResponseEntity<String>  sendCardToPersoService(@PathVariable("regId") String regId) {
+		printLogger.info("request received to send card to perso service for regId: {}",regId);
+		String response = printService.sendCardToPersoService(regId);
+		printLogger.info("response from perso service for regId: {} is {}",regId,response);
+		return new ResponseEntity<>(response, HttpStatus.OK);
 	}
 }

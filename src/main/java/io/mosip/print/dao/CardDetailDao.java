@@ -46,4 +46,14 @@ public class CardDetailDao {
 
 	    return records;
 	}
+
+	@Transactional
+	public List<CardDetail> fetchCardDetailByRegId(String regId) {
+	    return cardDetailRepository.findByRegId(regId).stream().collect(Collectors.toList());
+	}
+
+	@Transactional
+	public List<CardDetail> fetchCardDetailByNin(String nin) {
+	    return cardDetailRepository.findByNin(nin).stream().collect(Collectors.toList());
+	}
 }

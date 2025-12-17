@@ -20,4 +20,8 @@ public interface CardDetailRepository extends JpaRepository<CardDetail, String> 
 	@Modifying
 	@Query(value = "UPDATE print.card_detail SET is_processing = true WHERE transaction_id IN (:ids)", nativeQuery = true)
 	public void markAsProcessing(@Param("ids") List<String> ids);
+
+	Optional<CardDetail> findByRegId(String regId);
+
+	Optional<CardDetail> findByNin(String nin);
 }

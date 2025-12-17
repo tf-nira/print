@@ -36,6 +36,7 @@ import com.google.gson.JsonArray;
 import io.mosip.print.constant.*;
 import io.mosip.print.dto.*;
 import io.mosip.print.entity.NotificationStatus;
+import io.mosip.print.exception.*;
 import io.mosip.print.repository.NotificationStatusRepository;
 import io.mosip.print.service.NotificationService;
 import org.apache.commons.codec.binary.Base64;
@@ -68,18 +69,6 @@ import io.mosip.print.core.http.RequestWrapper;
 import io.mosip.print.core.http.ResponseWrapper;
 import io.mosip.print.dao.CardDetailDao;
 import io.mosip.print.entity.CardDetail;
-import io.mosip.print.exception.ApiNotAccessibleException;
-import io.mosip.print.exception.ApisResourceAccessException;
-import io.mosip.print.exception.CryptoManagerException;
-import io.mosip.print.exception.DataShareException;
-import io.mosip.print.exception.ExceptionUtils;
-import io.mosip.print.exception.IdRepoAppException;
-import io.mosip.print.exception.IdentityNotFoundException;
-import io.mosip.print.exception.PDFGeneratorException;
-import io.mosip.print.exception.ParsingException;
-import io.mosip.print.exception.PlatformErrorMessages;
-import io.mosip.print.exception.QrcodeGenerationException;
-import io.mosip.print.exception.VidCreationException;
 import io.mosip.print.logger.LogDescription;
 import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.model.CredentialStatusEvent;
@@ -109,7 +98,7 @@ import io.mosip.print.util.WebSubSubscriptionHelper;
 public class PrintServiceImpl implements PrintService{
 
 	private String topic="CREDENTIAL_STATUS_UPDATE";
-	
+
 	@Autowired
 	private WebSubSubscriptionHelper webSubSubscriptionHelper;
 
@@ -1456,20 +1445,96 @@ public class PrintServiceImpl implements PrintService{
 				smsTemplateTypeCode = readySmsCode;
 			}
 
-			// fetch identityJson
-			JSONObject identityJson = utilities.retrieveIdrepoResponseObjWithNIN(nin);
+			Map<String, String> fieldData = null;
+			List<CardDetail> cardDetails = cardDetailDao.fetchCardDetailByNin(nin);
+			if (cardDetails != null && !cardDetails.isEmpty()) {
+				CardDetail cardDetail = cardDetails.get(0);
 
-			// set attributes
-			String surname = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "surname")).get(0), "value");
-			String givenName = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "givenName")).get(0), "value");
+				printLogger.info("Card Details fetched for nin {} : {}", nin, cardDetail);
+
+				List<String> fields = new ArrayList<>();
+				fields.add("surname");
+				fields.add("givenName");
+				fields.add("email");
+				fields.add("phone");
+				fields.add("residenceStatus");
+				fields.add("CountryCode");
+
+				// get reg-id, source and process
+				String regId = cardDetail.getRegId();
+				String source = null;
+
+				// get Process
+				String eventData = cardDetail.getEventData();
+				JsonNode rootNode = mapper.readTree(eventData);
+				String process = rootNode.at("/event/data/registrationType").asText();
+
+				if (regId.length() == 13)  {
+					source = "DATAMIGRATOR";
+					process = "MIGRATOR";
+				}
+				else source = "REGISTRATION_CLIENT";
+
+				// If no process in eventData, hit-and-try with all possible processes
+				if (process == null || process.isBlank()) {
+					String[] processesToTry = {"RENEWAL", "UPDATE", "FIRSTID", "LOST", "NEW"};
+					for (String p : processesToTry) {
+						try {
+							printLogger.info("Trying to fetch registration fields for nin {} with process {}", nin, p);
+							fieldData = utilities.getFields(regId, fields, source, p);
+                            break;
+						} catch (ObjectDoesnotExistsException ode) {
+							// wrong process, try next
+						} catch (PacketManagerException pe) {
+							remark = Optional.ofNullable(pe.getLocalizedMessage())
+									.filter(msg -> !msg.isBlank())
+									.orElse(pe.getClass().getSimpleName());
+							// real error, stop trying further
+							break;
+						}
+					}
+					if (fieldData == null && remark == null) {
+						printLogger.error("No registration process found for nin {}", nin);
+					}
+				} else {
+					try {
+						fieldData = utilities.getFields(regId, fields, source, process);
+					} catch (ObjectDoesnotExistsException ode) {
+						printLogger.error("No data found for nin {} and process {}", nin, process);
+						printLogger.error(ode.getMessage(), ode);
+					} catch (PacketManagerException pe) {
+						remark = Optional.ofNullable(pe.getLocalizedMessage())
+								.filter(msg -> !msg.isBlank())
+								.orElse(pe.getClass().getSimpleName());
+					}
+				}
+			}
+
+			if (fieldData == null) {
+				if (remark == null) {
+					remark = "Failed to fetch registration fields";
+				}
+				return false;
+			}
+
+			// fetch identity fields from packet manager response
+			String surnameJson = fieldData.get("surname");
+			JsonNode jsonArray = mapper.readTree(surnameJson);
+			String surnameValue = jsonArray.get(0).get("value").asText();
+
+			String givenNameJson = fieldData.get("givenName");
+			jsonArray = mapper.readTree(givenNameJson);
+			String givenNameValue = jsonArray.get(0).get("value").asText();
+
 			String maskedNin = "*******" + nin.substring(7, 14);
-			attributes.put("surname", surname);
-			attributes.put("givenName", givenName);
-			attributes.put("maskedNin",maskedNin );
+
+			attributes.put("surname", surnameValue);
+			attributes.put("givenName", givenNameValue);
+			attributes.put("maskedNin",maskedNin);
 
 			// send notification
-			String email = JsonUtil.getJSONValue(identityJson, "email");
-			String phoneNo = JsonUtil.getJSONValue(identityJson, "phone");
+			String email = fieldData.get("email");
+			String phoneNo = fieldData.get("phone");
 
 			if (Objects.equals(String.valueOf(attributes.get("district")), "KAMPALA (12)")) {
 				Object countyValue = attributes.get("county");
@@ -1483,7 +1548,14 @@ public class PrintServiceImpl implements PrintService{
 
 			printLogger.info("Attributes Map for nin {} : {}", nin, attributes);
 
-			String residenceStatus = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "residenceStatus")).get(0), "value");
+			String residenceStatusJson = fieldData.get("residenceStatus");
+			jsonArray = mapper.readTree(residenceStatusJson);
+			String residenceStatus = jsonArray.get(0).get("value").asText();
+
+			String countryCodeJson = fieldData.get("CountryCode");
+			jsonArray = mapper.readTree(countryCodeJson);
+			String countryCode = jsonArray.get(0).get("value").asText();
+
 			if (email != null && (residenceStatus == null || "Outside Uganda".equals(residenceStatus))) {
 				try {
 					EmailResponseDTO emailResp = notificationService.sendEmail(emailTemplateTypeCode, emailSubjectTemplateTypeCode, attributes, email);
@@ -1496,7 +1568,6 @@ public class PrintServiceImpl implements PrintService{
                 }
             } else emailSent = true;
 
-			String countryCode = JsonUtil.getJSONValue((JSONObject) ((JSONArray) JsonUtil.getJSONValue(identityJson, "CountryCode")).get(0), "value");
 			if (phoneNo != null && (residenceStatus == null || "In Uganda".equals(residenceStatus)) && countryCode != null && "Uganda (256)".equals(countryCode)) {
 				try {
 					SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
@@ -1529,5 +1600,39 @@ public class PrintServiceImpl implements PrintService{
 		    }
 	    }
 		return emailSent && smsSent;
+	}
+
+	public String sendCardToPersoService(String regId) {
+		List<CardDetail> cardDetails = cardDetailDao.fetchCardDetailByRegId(regId);
+		if (cardDetails != null && !cardDetails.isEmpty()) {
+			CardDetail cardDetail = cardDetails.get(0);
+
+			if (cardDetail.getIsReadyToPush() && !cardDetail.getIsProcessing() &&
+					!cardDetail.getIsPushed() && cardDetail.getRemark() == null) {
+                processSingleRequest(cardDetail);
+            }
+
+			if (cardDetail.getIsPushed()) {
+				printLogger.info("Card details pushed for regId {}", regId);
+				return CardStatusMessage.SENT.format(regId);
+			}
+
+			if (cardDetail.getIsProcessing()) {
+				printLogger.info("Card details processing is ongoing for regId {}", regId);
+				return CardStatusMessage.PROCESSING.format(regId);
+			}
+
+			if (cardDetail.getIsFailed() && cardDetail.getRemark() != null) {
+				printLogger.warn("Card details for regId {} has remark: {}", regId, cardDetail.getRemark());
+				return CardStatusMessage.FAILED.format(regId, cardDetail.getRemark());
+			}
+
+			printLogger.warn("Card Details for regId {} is invalid for sending to perso, with remark {}", regId, cardDetail.getRemark());
+			return CardStatusMessage.INTERNAL_ERROR.format();
+
+		} else {
+			printLogger.warn("No card details found for regId {}", regId);
+			return CardStatusMessage.NO_DETAILS.format(regId);
+		}
 	}
 }
