@@ -1446,15 +1446,14 @@ public class PrintServiceImpl implements PrintService{
 			}
 
 			Map<String, String> fieldData = null;
+			CardDetail cardDetail = null;
 			List<CardDetail> cardDetails = cardDetailDao.fetchCardDetailByNin(nin);
 			if (cardDetails != null && !cardDetails.isEmpty()) {
-				CardDetail cardDetail = cardDetails.get(0);
+				cardDetail = cardDetails.get(0);
 
-				printLogger.info("Card Details fetched for nin {} : {}", nin, cardDetail);
+				printLogger.info("Card Details fetched for nin {} ", nin);
 
 				List<String> fields = new ArrayList<>();
-				fields.add("surname");
-				fields.add("givenName");
 				fields.add("email");
 				fields.add("phone");
 				fields.add("residenceStatus");
@@ -1469,7 +1468,7 @@ public class PrintServiceImpl implements PrintService{
 				JsonNode rootNode = mapper.readTree(eventData);
 				String process = rootNode.at("/event/data/registrationType").asText();
 
-				if (regId.length() == 13)  {
+				if (regId != null && regId.length() == 13)  {
 					source = "DATAMIGRATOR";
 					process = "MIGRATOR";
 				}
@@ -1518,13 +1517,8 @@ public class PrintServiceImpl implements PrintService{
 			}
 
 			// fetch identity fields from packet manager response
-			String surnameJson = fieldData.get("surname");
-			JsonNode jsonArray = mapper.readTree(surnameJson);
-			String surnameValue = jsonArray.get(0).get("value").asText();
-
-			String givenNameJson = fieldData.get("givenName");
-			jsonArray = mapper.readTree(givenNameJson);
-			String givenNameValue = jsonArray.get(0).get("value").asText();
+			String surnameValue = cardDetail.getSurname();
+			String givenNameValue = cardDetail.getGivenName();
 
 			String maskedNin = "*******" + nin.substring(7, 14);
 
@@ -1548,13 +1542,24 @@ public class PrintServiceImpl implements PrintService{
 
 			printLogger.info("Attributes Map for nin {} : {}", nin, attributes);
 
+			String residenceStatus = null;
+			String countryCode = null;
+
 			String residenceStatusJson = fieldData.get("residenceStatus");
-			jsonArray = mapper.readTree(residenceStatusJson);
-			String residenceStatus = jsonArray.get(0).get("value").asText();
+			if (residenceStatusJson != null && !residenceStatusJson.isBlank()) {
+				JsonNode jsonArray = mapper.readTree(residenceStatusJson);
+				if (jsonArray.isArray() && !jsonArray.isEmpty() && jsonArray.get(0).hasNonNull("value")) {
+					residenceStatus = jsonArray.get(0).get("value").asText();
+				}
+			}
 
 			String countryCodeJson = fieldData.get("CountryCode");
-			jsonArray = mapper.readTree(countryCodeJson);
-			String countryCode = jsonArray.get(0).get("value").asText();
+			if (countryCodeJson != null && !countryCodeJson.isBlank()) {
+				JsonNode jsonArray = mapper.readTree(countryCodeJson);
+				if (jsonArray.isArray() && !jsonArray.isEmpty() && jsonArray.get(0).hasNonNull("value")) {
+					countryCode = jsonArray.get(0).get("value").asText();
+				}
+			}
 
 			if (email != null && (residenceStatus == null || "Outside Uganda".equals(residenceStatus))) {
 				try {
