@@ -1607,27 +1607,30 @@ public class PrintServiceImpl implements PrintService{
 		if (cardDetails != null && !cardDetails.isEmpty()) {
 			CardDetail cardDetail = cardDetails.get(0);
 
-			if (cardDetail.getIsReadyToPush() && !cardDetail.getIsProcessing() &&
-					!cardDetail.getIsPushed() && cardDetail.getRemark() == null) {
-                processSingleRequest(cardDetail);
-            }
+			if (Boolean.TRUE.equals(cardDetail.getIsReadyToPush())
+					&& !Boolean.TRUE.equals(cardDetail.getIsProcessing())
+					&& !Boolean.TRUE.equals(cardDetail.getIsPushed())
+					&& cardDetail.getRemark() == null) {
+				processSingleRequest(cardDetail);
+			}
 
-			if (cardDetail.getIsPushed()) {
+			if (Boolean.TRUE.equals(cardDetail.getIsPushed())) {
 				printLogger.info("Card details pushed for regId {}", regId);
 				return CardStatusMessage.SENT.format(regId);
 			}
 
-			if (cardDetail.getIsProcessing()) {
+			if (Boolean.TRUE.equals(cardDetail.getIsProcessing())) {
 				printLogger.info("Card details processing is ongoing for regId {}", regId);
 				return CardStatusMessage.PROCESSING.format(regId);
 			}
 
-			if (cardDetail.getIsFailed() && cardDetail.getRemark() != null) {
+			if (Boolean.TRUE.equals(cardDetail.getIsFailed()) && cardDetail.getRemark() != null) {
 				printLogger.warn("Card details for regId {} has remark: {}", regId, cardDetail.getRemark());
 				return CardStatusMessage.FAILED.format(regId, cardDetail.getRemark());
 			}
 
-			printLogger.warn("Card Details for regId {} is invalid for sending to perso, with remark {}", regId, cardDetail.getRemark());
+			printLogger.warn("Card Details for regId {} is invalid for sending to perso, with remark {}",
+					regId, cardDetail.getRemark());
 			return CardStatusMessage.INTERNAL_ERROR.format();
 
 		} else {
