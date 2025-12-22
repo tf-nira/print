@@ -1,6 +1,7 @@
 package io.mosip.print.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.mosip.kernel.core.util.DateUtils;
 import io.mosip.print.constant.ApiName;
 import io.mosip.print.constant.LoggerFileConstant;
 import io.mosip.print.core.http.RequestWrapper;
@@ -114,7 +115,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public SmsResponseDTO sendSMS(String templateTypCode, Map<String, Object> attributes, String phone) throws Exception {
-        SmsResponseDTO responseDto;
+        SmsResponseDTO responseDto = null;
 
         try {
             String artifact = "";
@@ -132,7 +133,7 @@ public class NotificationServiceImpl implements NotificationService {
             String pattern = Objects.requireNonNull(env.getProperty(DATETIME_PATTERN));
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
 
-            String utcDateTimeStr = io.mosip.kernel.core.util.DateUtils.getUTCCurrentDateTimeString(pattern);
+            String utcDateTimeStr = DateUtils.getUTCCurrentDateTimeString(pattern);
             LocalDateTime requestTime = LocalDateTime.parse(utcDateTimeStr, formatter);
 
             RequestWrapper<SmsRequestDTO> requestWrapper = new RequestWrapper<>();
@@ -147,8 +148,10 @@ public class NotificationServiceImpl implements NotificationService {
 
             ResponseWrapper<?>responseWrapper = (ResponseWrapper<?>) restClientService.postApi(ApiName.SMSNOTIFIER, "", "",
                     requestWrapper, ResponseWrapper.class);
-            
-            responseDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()), SmsResponseDTO.class);
+
+            if (responseWrapper.getResponse() != null) {
+                responseDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()), SmsResponseDTO.class);
+            }
 
             printLogger.debug(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.USERID.toString(), "",
                     "NotificationServiceImpl::sendSMS():: SMSNOTIFIER POST service ended with response : "

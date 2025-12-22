@@ -1576,7 +1576,8 @@ public class PrintServiceImpl implements PrintService{
 			if (phoneNo != null && (residenceStatus == null || "In Uganda".equals(residenceStatus)) && countryCode != null && "Uganda (256)".equals(countryCode)) {
 				try {
 					SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
-					if (smsResp.getStatus().equals("success")) smsSent = true;
+					if (smsResp == null) remark = "SMS service returned null response";
+					else if (smsResp.getStatus().equals("success")) smsSent = true;
 				} catch (Exception e) {
 					remark = Optional.ofNullable(e.getLocalizedMessage())
                             .filter(msg -> !msg.isBlank())
