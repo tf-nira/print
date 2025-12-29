@@ -1,7 +1,5 @@
 package io.mosip.print.repository;
 
-import io.mosip.print.entity.CardDetail;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -9,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import io.mosip.print.entity.CardDetail;
 
 public interface CardDetailRepository extends JpaRepository<CardDetail, String> {
     
@@ -21,7 +21,7 @@ public interface CardDetailRepository extends JpaRepository<CardDetail, String> 
 	@Query(value = "UPDATE print.card_detail SET is_processing = true WHERE transaction_id IN (:ids)", nativeQuery = true)
 	public void markAsProcessing(@Param("ids") List<String> ids);
 
-	Optional<CardDetail> findByRegId(String regId);
+	List<CardDetail> findByRegId(String regId);
 
-	Optional<CardDetail> findByNin(String nin);
+	List<CardDetail> findByNin(String nin);
 }
