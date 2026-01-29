@@ -1581,10 +1581,10 @@ public class PrintServiceImpl implements PrintService{
 			String email = fieldData.get("email");
 			String phoneNo = fieldData.get("phone");
 
-			if (Objects.equals(String.valueOf(attributes.get("district")), "KAMPALA (12)")) {
+			String district = String.valueOf(attributes.get("district"));
+			if (district != null && district.toUpperCase().contains("KAMPALA")) {
 				Object countyValue = attributes.get("county");
 				if (countyValue != null) {
-					String district = String.valueOf(attributes.get("district"));
 					String county = String.valueOf(countyValue);
 					String newDistrict = district + " - " + county;
 					attributes.put("district", newDistrict);
