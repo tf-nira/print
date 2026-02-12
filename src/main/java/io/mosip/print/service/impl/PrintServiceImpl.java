@@ -380,7 +380,7 @@ public class PrintServiceImpl implements PrintService{
 			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId, true);
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
 			String response = serviceCaller.callPersoService(persoRequestDto);
 
@@ -568,8 +568,11 @@ public class PrintServiceImpl implements PrintService{
 			} else {
 				persoRequestDto.setNin(NIN);
 			}
-			String process = (String) eventModel.getEvent().getData().get("registrationType");
-            persoRequestDto.setProcess(process);
+
+            if (eventModel != null && eventModel.getEvent() != null && eventModel.getEvent().getData() != null) {
+                String process = (String) eventModel.getEvent().getData().get("registrationType");
+                persoRequestDto.setProcess(process);  // null-safe
+            }
 
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
