@@ -149,7 +149,7 @@ public class NotificationServiceImpl implements NotificationService {
             ResponseWrapper<?>responseWrapper = (ResponseWrapper<?>) restClientService.postApi(ApiName.SMSNOTIFIER, "", "",
                     requestWrapper, ResponseWrapper.class);
 
-            if (responseWrapper.getResponse() != null) {
+            if (responseWrapper!= null && responseWrapper.getResponse() != null) {
                 responseDto = mapper.readValue(mapper.writeValueAsString(responseWrapper.getResponse()), SmsResponseDTO.class);
             }
 

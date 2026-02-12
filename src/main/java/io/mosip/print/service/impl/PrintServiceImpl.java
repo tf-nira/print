@@ -568,6 +568,8 @@ public class PrintServiceImpl implements PrintService{
 			} else {
 				persoRequestDto.setNin(NIN);
 			}
+			String process = (String) eventModel.getEvent().getData().get("registrationType");
+            persoRequestDto.setProcess(process);
 
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");

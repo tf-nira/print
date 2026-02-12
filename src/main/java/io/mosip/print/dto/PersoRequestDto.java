@@ -23,4 +23,5 @@ public class PersoRequestDto {
 	private String applicantForeignResidenceCountry;
 	private String residenceStatus;
 	private PersoBiometricsDto biometrics;
+	private String process;
 }
