@@ -1630,18 +1630,23 @@ public class PrintServiceImpl implements PrintService{
             } else emailSent = true;
 
 			if (phoneNo != null && (residenceStatus == null || "In Uganda".equals(residenceStatus)) && countryCode != null && "Uganda (256)".equals(countryCode)) {
-				try {
-					SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
-					if (smsResp == null) remark = "SMS service returned null response";
-					else if (smsResp.getStatus().equals("success")) smsSent = true;
-				} catch (Exception e) {
-					remark = Optional.ofNullable(e.getLocalizedMessage())
-                            .filter(msg -> !msg.isBlank())
-                            .orElse(e.getClass().getSimpleName());
-					remark = remark + " | Phone number length: " + phoneNo.length();
-					printLogger.error("Failed to send SMS notification for the topic {}", topic, e);
-                }
-            } else smsSent = true;
+				if (phoneNo.length() == 10) {
+					try {
+						SmsResponseDTO smsResp = notificationService.sendSMS(smsTemplateTypeCode, attributes, phoneNo);
+						if (smsResp == null) remark = "SMS service returned null response";
+						else if (smsResp.getStatus().equals("success")) smsSent = true;
+					} catch (Exception e) {
+						remark = Optional.ofNullable(e.getLocalizedMessage())
+								.filter(msg -> !msg.isBlank())
+								.orElse(e.getClass().getSimpleName());
+						remark = remark + " | Phone number length: " + phoneNo.length();
+						printLogger.error("Failed to send SMS notification for the topic {}", topic, e);
+					}
+				} else {
+					remark = "Invalid phone number length: " + phoneNo.length();
+					printLogger.error("Failed to send SMS notification for the topic {} due to invalid phone number length: {}", topic, phoneNo.length());
+				}
+			} else smsSent = true;
 
 		} catch (Exception e) {
 			remark = Optional.ofNullable(e.getLocalizedMessage())
