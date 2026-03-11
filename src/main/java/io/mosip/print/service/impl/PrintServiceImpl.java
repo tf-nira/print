@@ -19,8 +19,19 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -32,13 +43,6 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 
-import com.google.gson.JsonArray;
-import io.mosip.print.constant.*;
-import io.mosip.print.dto.*;
-import io.mosip.print.entity.NotificationStatus;
-import io.mosip.print.exception.*;
-import io.mosip.print.repository.NotificationStatusRepository;
-import io.mosip.print.service.NotificationService;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
@@ -53,7 +57,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -65,22 +68,70 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import io.mosip.kernel.core.websub.spi.PublisherClient;
+import io.mosip.print.constant.ApiName;
+import io.mosip.print.constant.CardStatusMessage;
+import io.mosip.print.constant.EventId;
+import io.mosip.print.constant.EventName;
+import io.mosip.print.constant.EventType;
+import io.mosip.print.constant.FingerType;
+import io.mosip.print.constant.ModuleName;
+import io.mosip.print.constant.PDFGeneratorExceptionCodeConstant;
+import io.mosip.print.constant.PlatformSuccessMessages;
+import io.mosip.print.constant.QrVersion;
 import io.mosip.print.core.http.RequestWrapper;
 import io.mosip.print.core.http.ResponseWrapper;
 import io.mosip.print.dao.CardDetailDao;
+import io.mosip.print.dto.CardNumberUpdateDto;
+import io.mosip.print.dto.CardUpdateRequestDto;
+import io.mosip.print.dto.CryptoWithPinRequestDto;
+import io.mosip.print.dto.CryptoWithPinResponseDto;
+import io.mosip.print.dto.DemographicDto;
+import io.mosip.print.dto.EmailResponseDTO;
+import io.mosip.print.dto.ErrorDTO;
+import io.mosip.print.dto.EventData;
+import io.mosip.print.dto.EventDetails;
+import io.mosip.print.dto.EventTypeDto;
+import io.mosip.print.dto.FingerPrintDto;
+import io.mosip.print.dto.JsonValue;
+import io.mosip.print.dto.NinDetailsRequest;
+import io.mosip.print.dto.NinDetailsResponse;
+import io.mosip.print.dto.PersoAddressDto;
+import io.mosip.print.dto.PersoBiometricsDto;
+import io.mosip.print.dto.PersoEnrollmenetAddressDTO;
+import io.mosip.print.dto.PersoRequestDto;
+import io.mosip.print.dto.SmsResponseDTO;
+import io.mosip.print.dto.UpdateStatusResponseDto;
+import io.mosip.print.dto.VidRequestDto;
+import io.mosip.print.dto.VidResponseDTO;
 import io.mosip.print.entity.CardDetail;
+import io.mosip.print.entity.NotificationStatus;
+import io.mosip.print.exception.ApiNotAccessibleException;
+import io.mosip.print.exception.ApisResourceAccessException;
+import io.mosip.print.exception.CryptoManagerException;
+import io.mosip.print.exception.DataShareException;
+import io.mosip.print.exception.ExceptionUtils;
+import io.mosip.print.exception.IdRepoAppException;
+import io.mosip.print.exception.IdentityNotFoundException;
+import io.mosip.print.exception.ObjectDoesnotExistsException;
+import io.mosip.print.exception.PDFGeneratorException;
+import io.mosip.print.exception.PacketManagerException;
+import io.mosip.print.exception.ParsingException;
+import io.mosip.print.exception.PlatformErrorMessages;
+import io.mosip.print.exception.QrcodeGenerationException;
+import io.mosip.print.exception.VidCreationException;
 import io.mosip.print.logger.LogDescription;
 import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.model.CredentialStatusEvent;
 import io.mosip.print.model.EventModel;
 import io.mosip.print.model.StatusEvent;
 import io.mosip.print.repository.CardDetailRepository;
+import io.mosip.print.repository.NotificationStatusRepository;
+import io.mosip.print.service.NotificationService;
 import io.mosip.print.service.PrintRestClientService;
 import io.mosip.print.service.PrintService;
 import io.mosip.print.service.UinCardGenerator;
 import io.mosip.print.spi.CbeffUtil;
 import io.mosip.print.spi.QrCodeGenerator;
-import io.mosip.print.util.AuditLogRequestBuilder;
 import io.mosip.print.util.CbeffToBiometricUtil;
 import io.mosip.print.util.CryptoCoreUtil;
 import io.mosip.print.util.CryptoUtil;
@@ -329,7 +380,7 @@ public class PrintServiceImpl implements PrintService{
 			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, null, registrationId, true);
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
 			String response = serviceCaller.callPersoService(persoRequestDto);
 
@@ -517,8 +568,11 @@ public class PrintServiceImpl implements PrintService{
 			} else {
 				persoRequestDto.setNin(NIN);
 			}
-			String process = (String) eventModel.getEvent().getData().get("registrationType");
-            persoRequestDto.setProcess(process);
+
+            if (eventModel != null && eventModel.getEvent() != null && eventModel.getEvent().getData() != null) {
+                String process = (String) eventModel.getEvent().getData().get("registrationType");
+                persoRequestDto.setProcess(process);  // null-safe
+            }
 
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
@@ -1532,10 +1586,10 @@ public class PrintServiceImpl implements PrintService{
 			String email = fieldData.get("email");
 			String phoneNo = fieldData.get("phone");
 
-			if (Objects.equals(String.valueOf(attributes.get("district")), "KAMPALA (12)")) {
+			String district = String.valueOf(attributes.get("district"));
+			if (district != null && district.toUpperCase().contains("KAMPALA")) {
 				Object countyValue = attributes.get("county");
 				if (countyValue != null) {
-					String district = String.valueOf(attributes.get("district"));
 					String county = String.valueOf(countyValue);
 					String newDistrict = district + " - " + county;
 					attributes.put("district", newDistrict);
@@ -1584,6 +1638,7 @@ public class PrintServiceImpl implements PrintService{
 					remark = Optional.ofNullable(e.getLocalizedMessage())
                             .filter(msg -> !msg.isBlank())
                             .orElse(e.getClass().getSimpleName());
+					remark = remark + " | Phone number length: " + phoneNo.length();
 					printLogger.error("Failed to send SMS notification for the topic {}", topic, e);
                 }
             } else smsSent = true;
