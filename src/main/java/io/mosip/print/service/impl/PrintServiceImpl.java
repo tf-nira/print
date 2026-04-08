@@ -1377,6 +1377,7 @@ public class PrintServiceImpl implements PrintService{
 					Map<String, Object> attributes = new HashMap<>();
 					attributes.put("district", cardUpdateInput.getEvent().getDistrict());
 					attributes.put("county", cardUpdateInput.getEvent().getCounty());
+					attributes.put("batchNumber", cardUpdateInput.getEvent().getBatchNumber());
 
 					if (cardUpdateInput.getEvent().getIssuanceDate() != null) {
 						SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
