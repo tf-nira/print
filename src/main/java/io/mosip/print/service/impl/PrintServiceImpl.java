@@ -1609,6 +1609,11 @@ public class PrintServiceImpl implements PrintService{
 				}
 			}
 
+			String batchNumber = String.valueOf(attributes.get("batchNumber"));
+			if (batchNumber == null) {
+				attributes.put("batchNumber", "N/A");
+			}
+
 			printLogger.info("Attributes Map for nin {} : {}", nin, attributes);
 
 			String residenceStatus = null;
