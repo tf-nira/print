@@ -1536,6 +1536,11 @@ public class PrintServiceImpl implements PrintService{
 				String eventData = cardDetail.getEventData();
 				JsonNode rootNode = mapper.readTree(eventData);
 				String process = rootNode.at("/event/data/registrationType").asText();
+				
+				// Handle ALIEN prefix in process
+				if (process != null && process.startsWith("ALIEN")) {
+					process = process.substring("ALIEN".length());
+				}
 
 				if (regId != null && regId.length() == 13)  {
 					source = "DATAMIGRATOR";
