@@ -16,4 +16,5 @@ public class EventDto {
 	private String receiverSurname;
 	private String receiverOtherName;
 	private String receiverGivenName;
+	private String batchNumber;
 }

@@ -1377,6 +1377,7 @@ public class PrintServiceImpl implements PrintService{
 					Map<String, Object> attributes = new HashMap<>();
 					attributes.put("district", cardUpdateInput.getEvent().getDistrict());
 					attributes.put("county", cardUpdateInput.getEvent().getCounty());
+					attributes.put("batchNumber", cardUpdateInput.getEvent().getBatchNumber());
 
 					if (cardUpdateInput.getEvent().getIssuanceDate() != null) {
 						SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX");
@@ -1535,6 +1536,11 @@ public class PrintServiceImpl implements PrintService{
 				String eventData = cardDetail.getEventData();
 				JsonNode rootNode = mapper.readTree(eventData);
 				String process = rootNode.at("/event/data/registrationType").asText();
+				
+				// Handle ALIEN prefix in process
+				if (process != null && process.startsWith("ALIEN")) {
+					process = process.substring("ALIEN".length());
+				}
 
 				if (regId != null && regId.length() == 13)  {
 					source = "DATAMIGRATOR";
@@ -1606,6 +1612,11 @@ public class PrintServiceImpl implements PrintService{
 					String newDistrict = district + " - " + county;
 					attributes.put("district", newDistrict);
 				}
+			}
+
+			String batchNumber = String.valueOf(attributes.get("batchNumber"));
+			if (batchNumber == null) {
+				attributes.put("batchNumber", "N/A");
 			}
 
 			printLogger.info("Attributes Map for nin {} : {}", nin, attributes);
