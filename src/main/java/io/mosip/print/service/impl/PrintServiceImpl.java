@@ -368,7 +368,7 @@ public class PrintServiceImpl implements PrintService{
 				printLogger.warn("Registration ID {} is in exclusion list. Marking as SKIP.", request.getRegId());
 				request.setIsProcessing(false);
 				request.setIsFailed(true);
-				request.setRemark("SKIP");
+				request.setRemark("Analysed :: Duplicate nin-MA issue :: NO ACTION");
 				request.setUpdatedBy("SYSTEM");
 				request.setUpdatedTimes(LocalDateTime.now());
 				cardDetailRepository.save(request);
@@ -711,7 +711,7 @@ public class PrintServiceImpl implements PrintService{
 							printLogger.warn("Registration ID {} is in exclusion list. Marking as failed with remark SKIP.", registrationId);
 							cardDetail.setIsReadyToPush(false);
 							cardDetail.setIsFailed(true);
-							cardDetail.setRemark("SKIP");
+							cardDetail.setRemark("Analysed :: Duplicate nin-MA issue :: NO ACTION");
 						}
 
 						cardDetailRepository.save(cardDetail);
