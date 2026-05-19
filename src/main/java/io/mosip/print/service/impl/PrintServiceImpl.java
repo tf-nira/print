@@ -125,6 +125,7 @@ import io.mosip.print.model.CredentialStatusEvent;
 import io.mosip.print.model.EventModel;
 import io.mosip.print.model.StatusEvent;
 import io.mosip.print.repository.CardDetailRepository;
+import io.mosip.print.repository.CardExclusionRepository;
 import io.mosip.print.repository.NotificationStatusRepository;
 import io.mosip.print.service.NotificationService;
 import io.mosip.print.service.PrintRestClientService;
@@ -252,7 +253,10 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Autowired
 	CardDetailRepository cardDetailRepository;
-	
+
+	@Autowired
+	CardExclusionRepository cardExclusionRepository;
+
 	@Value("${mosip.datashare.partner.id}")
 	private String partnerId;
 
@@ -359,6 +363,18 @@ public class PrintServiceImpl implements PrintService{
 	
 	private Object processSingleRequest(CardDetail request) {
 		try {
+			// Check if this record is in the exclusion list — skip sending to perso
+			if (cardExclusionRepository.existsByRegId(request.getRegId())) {
+				printLogger.warn("Registration ID {} is in exclusion list. Marking as SKIP.", request.getRegId());
+				request.setIsProcessing(false);
+				request.setIsFailed(true);
+				request.setRemark("SKIP");
+				request.setUpdatedBy("SYSTEM");
+				request.setUpdatedTimes(LocalDateTime.now());
+				cardDetailRepository.save(request);
+				return null;
+			}
+
 			ObjectMapper objMapper = new ObjectMapper();
 			EventModel eventModel = objMapper.readValue(request.getEventData(), EventModel.class);
 
@@ -690,6 +706,14 @@ public class PrintServiceImpl implements PrintService{
 						populateCardDetail(cardDetail, persoRequestDto, registrationId, eventModel);
 						cardDetail.setCreatedBy("SYSTEM");
 						cardDetail.setCrDTimes(LocalDateTime.now());
+
+						if (cardExclusionRepository.existsByRegId(registrationId)) {
+							printLogger.warn("Registration ID {} is in exclusion list. Marking as failed with remark SKIP.", registrationId);
+							cardDetail.setIsReadyToPush(false);
+							cardDetail.setIsFailed(true);
+							cardDetail.setRemark("SKIP");
+						}
+
 						cardDetailRepository.save(cardDetail);
 						printLogger.info("Card details saved");
 					}
