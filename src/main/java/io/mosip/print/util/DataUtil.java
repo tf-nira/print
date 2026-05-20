@@ -33,7 +33,9 @@ public class DataUtil {
 			String[] line;
 			while ((line = csvReader.readNext()) != null) {
 				if (line.length >= 2) {
-					parishAndVillage.put(line[1], line[0]);
+					// Normalize key by replacing multiple spaces with single space and trim
+					String normalizedKey = line[1].replaceAll("\\s+", " ").trim();
+					parishAndVillage.put(normalizedKey, line[0]);
 				}
 			}
 		} catch (Exception e) {
@@ -47,7 +49,9 @@ public class DataUtil {
 
 	public static String getParishOrVillageCorrectData(String inputData) {
 		if (inputData != null) {
-			String outputData = parishAndVillage.get(inputData);
+			// Normalize input by replacing multiple spaces with single space and trim
+			String normalizedInput = inputData.replaceAll("\\s+", " ").trim();
+			String outputData = parishAndVillage.get(normalizedInput);
 			if (outputData != null) {
 				return outputData;
 			}
