@@ -1464,18 +1464,35 @@ public class PrintServiceImpl implements PrintService{
 	}
 	private byte[] convertToJPG(String isoTemplate, boolean isUpscaleRequired) {
 		byte[] inputFileBytes = Base64.decodeBase64(isoTemplate);
-		int index;
-		for (index = 0; index < inputFileBytes.length; index++) {
-			if ((char) inputFileBytes[index] == 'j' && (char) inputFileBytes[index + 1] == 'P') {
+		int index = -1;
+		// JP2 signature box contains the bytes: 0x6A 0x50 0x20 0x20 ("jP  ")
+		byte[] sig = new byte[] { 0x6A, 0x50, 0x20, 0x20 };
+		for (int i = 0; i <= inputFileBytes.length - sig.length; i++) {
+			if (inputFileBytes[i] == sig[0] && inputFileBytes[i + 1] == sig[1] && inputFileBytes[i + 2] == sig[2]
+					&& inputFileBytes[i + 3] == sig[3]) {
+				index = i;
 				break;
 			}
 		}
+
+		byte[] jp2Data;
+		if (index > 3) {
+			// include the 4-byte length field that precedes the signature box
+			jp2Data = Arrays.copyOfRange(inputFileBytes, index - 4, inputFileBytes.length);
+		} else {
+			// fallback to entire array if signature not found or at start
+			jp2Data = inputFileBytes;
+		}
+
 		try {
-			return convertToJPG(Arrays.copyOfRange(inputFileBytes, index - 4, inputFileBytes.length), "image",
-					isUpscaleRequired);
+			return convertToJPG(jp2Data, "image", isUpscaleRequired);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			// try fallback: attempt reading the whole decoded bytes if trimmed data failed
+			try {
+				return convertToJPG(inputFileBytes, "image", isUpscaleRequired);
+			} catch (IOException ex) {
+				printLogger.error("Failed to convert JP2 to JPG: {}", ex.getMessage(), ex);
+			}
 		}
 		return null;
 	}
