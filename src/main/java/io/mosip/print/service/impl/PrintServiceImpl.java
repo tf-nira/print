@@ -832,13 +832,21 @@ public class PrintServiceImpl implements PrintService{
 							isReadyToPush = false;
 							cardDetail.setRemark("Face check");
 						}
-					} else {
-						cardDetail.setRemark("Incorrect demographics");
-						
-						if (regId != null && regId.length() == 13) {
-							cardDetail.setRemark("Incorrect demographics and Face check");
-						}
+				} else {
+					DemographicDto demo = ninDetailsResponse.getDemographics();
+					printLogger.info("Demographic mismatch detected for NIN: " + cardDetail.getNin()
+							+ " | [NIN] card=" + cardDetail.getNin() + " migration=" + demo.getNin()
+							+ " | [GivenName] card=" + cardDetail.getGivenName() + " migration=" + getFirstValue(demo.getGivenName())
+							+ " | [Surname] card=" + cardDetail.getSurname() + " migration=" + getFirstValue(demo.getSurname())
+							+ " | [OtherName] card=" + cardDetail.getOtherName() + " migration=" + getFirstValue(demo.getOtherNames())
+							+ " | [Sex] card=" + cardDetail.getSex() + " migration=" + (getFirstValue(demo.getGender()).equals("Male") ? "M" : "F") + " (raw=" + getFirstValue(demo.getGender()) + ")"
+							+ " | [DateOfBirth] card=" + cardDetail.getDateOfBirth() + " migration=" + demo.getDateOfBirth());
+					cardDetail.setRemark("Incorrect demographics");
+					
+					if (regId != null && regId.length() == 13) {
+						cardDetail.setRemark("Incorrect demographics and Face check");
 					}
+				}
 					
 					printLogger.info("Demographic comparison done");
 				}
