@@ -284,6 +284,9 @@ public class PrintServiceImpl implements PrintService{
 	@Value("#{T(java.util.Arrays).asList('${print.service.legacy.check.process-names:RENEWAL,MIGRATOR}')}")
 	private List<String> legacyCheckProcess;
 
+	@Value("#{'${print.service.card.check.bypass.process-names:}'.split(',')}")
+	private List<String> cardCheckBypassProcessNames;
+
 	@Value("${mosip.print.service.delivered.email.code}")
 	private String deliveredEmailCode;
 
@@ -394,6 +397,20 @@ public class PrintServiceImpl implements PrintService{
 			proofMap = (Map) eventModel.getEvent().getData().get("proof");
 			String sign = proofMap.get("signature").toString();
 			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
+
+			// check process & isCardRequired before any further processing.
+			boolean valid = isRecordValid(decodedCrdential, ecryptionPin, eventModel);
+			if (!valid) {
+				printLogger.warn("Skipping perso dispatch for registration ID {} because record is invalid.", registrationId);
+				request.setIsProcessing(false);
+				request.setIsFailed(true);
+				request.setRemark("Card not required: record is invalid");
+				request.setUpdatedBy("SYSTEM");
+				request.setUpdatedTimes(LocalDateTime.now());
+				cardDetailRepository.save(request);
+				return null;
+			}
+
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
@@ -489,6 +506,13 @@ public class PrintServiceImpl implements PrintService{
 			proofMap = (Map) eventModel.getEvent().getData().get("proof");
 			String sign = proofMap.get("signature").toString();
 			String registrationId = (String) eventModel.getEvent().getData().get("registrationId");
+
+			boolean valid = isRecordValid(decodedCrdential, ecryptionPin, eventModel);
+			if (!valid) {
+				printLogger.info("Skipping DB save for registrationId {} because record is invalid.", registrationId);
+				return isPrinted = true; // not an error — intentionally skipped
+			}
+
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, false);
@@ -833,8 +857,16 @@ public class PrintServiceImpl implements PrintService{
 							cardDetail.setRemark("Face check");
 						}
 					} else {
+						DemographicDto demo = ninDetailsResponse.getDemographics();
+						printLogger.info("Demographic mismatch detected for NIN: " + cardDetail.getNin()
+								+ " | [NIN] card=" + cardDetail.getNin() + " migration=" + demo.getNin()
+								+ " | [GivenName] card=" + cardDetail.getGivenName() + " migration=" + getFirstValue(demo.getGivenName())
+								+ " | [Surname] card=" + cardDetail.getSurname() + " migration=" + getFirstValue(demo.getSurname())
+								+ " | [OtherName] card=" + cardDetail.getOtherName() + " migration=" + getFirstValue(demo.getOtherNames())
+								+ " | [Sex] card=" + cardDetail.getSex() + " migration=" + (getFirstValue(demo.getGender()).equals("Male") ? "M" : "F") + " (raw=" + getFirstValue(demo.getGender()) + ")"
+								+ " | [DateOfBirth] card=" + cardDetail.getDateOfBirth() + " migration=" + demo.getDateOfBirth());
 						cardDetail.setRemark("Incorrect demographics");
-						
+
 						if (regId != null && regId.length() == 13) {
 							cardDetail.setRemark("Incorrect demographics and Face check");
 						}
@@ -874,6 +906,35 @@ public class PrintServiceImpl implements PrintService{
 	        printLogger.error("Failed to parse JsonValue array: {}", e.getMessage());
 	    }
 	    return "";
+	}
+
+	private boolean isRecordValid(String decodedCredential, String encryptionPin, EventModel eventModel) {
+		try {
+			String process = (String) eventModel.getEvent().getData().get("registrationType");
+			boolean processBypassed = process != null && cardCheckBypassProcessNames.stream()
+							.map(String::trim)
+							.filter(p -> !p.isEmpty())
+							.anyMatch(p -> p.equalsIgnoreCase(process));
+
+			if (processBypassed) {
+				printLogger.info("isRecordValid - process '{}' is in bypass list, skipping isCardRequired check.", process);
+				return true;
+			}
+
+			// For all other processes, isCardRequired must be explicitly "Yes"
+			String credentialSubject = getCrdentialSubject(decodedCredential);
+			org.json.JSONObject credentialSubjectJson = new org.json.JSONObject(credentialSubject);
+			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, decodedCredential);
+			String isCardRequired = getString(decryptedJson, "isCardRequired");
+
+			boolean valid = "yes".equalsIgnoreCase(isCardRequired);
+			printLogger.info("isRecordValid - process: '{}', isCardRequired: '{}', result: {}", process, isCardRequired, valid);
+			return valid;
+
+		} catch (Exception e) {
+			printLogger.warn("Could not determine record validity from credential — treating as valid: {}", e.getMessage());
+			return true; // safe default: proceed if we can't determine validity
+		}
 	}
 
 	private String getAttribute(org.json.JSONObject  json, String attr) throws ParseException {
