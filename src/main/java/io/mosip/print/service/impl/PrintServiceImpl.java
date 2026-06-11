@@ -917,7 +917,7 @@ public class PrintServiceImpl implements PrintService{
 							.anyMatch(p -> p.equalsIgnoreCase(process));
 
 			if (processBypassed) {
-				printLogger.info("isRecordValid — process '{}' is in bypass list, skipping isCardRequired check.", process);
+				printLogger.info("isRecordValid - process '{}' is in bypass list, skipping isCardRequired check.", process);
 				return true;
 			}
 
@@ -927,13 +927,9 @@ public class PrintServiceImpl implements PrintService{
 			org.json.JSONObject decryptedJson = decryptAttribute(credentialSubjectJson, encryptionPin, decodedCredential);
 			String isCardRequired = getString(decryptedJson, "isCardRequired");
 
-			if (isCardRequired != null) {
-				boolean valid = "yes".equalsIgnoreCase(isCardRequired);
-				printLogger.info("isRecordValid — process: '{}', isCardRequired: '{}', result: {}", process, isCardRequired, valid);
-				return valid;
-			}
-
-			return true;
+			boolean valid = "yes".equalsIgnoreCase(isCardRequired);
+			printLogger.info("isRecordValid - process: '{}', isCardRequired: '{}', result: {}", process, isCardRequired, valid);
+			return valid;
 
 		} catch (Exception e) {
 			printLogger.warn("Could not determine record validity from credential — treating as valid: {}", e.getMessage());
