@@ -22,7 +22,7 @@ on:
       - release*
       - tf_nira_dev
       - tf_nira_prod
-      - tf_nira_prod_SR
+      - tf_nira_prod_JK
 
 jobs:
   build-maven-print:
