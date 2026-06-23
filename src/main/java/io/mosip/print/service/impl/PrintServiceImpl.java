@@ -1824,7 +1824,8 @@ public class PrintServiceImpl implements PrintService{
 
 			if (Boolean.TRUE.equals(cardDetail.getIsReadyToPush())
 					&& !Boolean.TRUE.equals(cardDetail.getIsProcessing())
-					&& !Boolean.TRUE.equals(cardDetail.getIsPushed())) {
+					&& !Boolean.TRUE.equals(cardDetail.getIsPushed())
+					&& cardDetail.getRemark() == null) {
 				processSingleRequest(cardDetail);
 			}
 
