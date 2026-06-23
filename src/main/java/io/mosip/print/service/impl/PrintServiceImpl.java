@@ -415,6 +415,8 @@ public class PrintServiceImpl implements PrintService{
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
+			printLogger.info("Perso Request for id : {} is : {}", request.getRegId(), persoRequestDto);
+
 			// Skip sending to perso service if signature is null
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
                 printLogger.warn("Skipping perso service call for registration ID: {}. Reason: Signature not present", registrationId);
