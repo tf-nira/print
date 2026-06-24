@@ -37,6 +37,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
+import java.util.Collections;
+import io.mosip.print.constant.LoggerFileConstant;
+import io.mosip.print.dto.CountryResponseDto;
+
 import javax.annotation.PostConstruct;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -322,6 +326,15 @@ public class PrintServiceImpl implements PrintService{
 	private NotificationStatusRepository notificationStatusRepository;
 	
 	private ObjectMapper mapper = new ObjectMapper();
+
+	private static class CountryMetadata {
+	    final Map<String, String> countryMap;
+	    CountryMetadata(Map<String, String> countryMap) {
+	        this.countryMap = countryMap;
+	    }
+	}
+
+	private CountryMetadata countryMetadata;
 	
 	@PostConstruct
     public void init() {
@@ -415,6 +428,8 @@ public class PrintServiceImpl implements PrintService{
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
+			printLogger.info("Perso Request for id : {} is : {}", request.getRegId(), persoRequestDto);
+			
 			// Skip sending to perso service if signature is null
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
                 printLogger.warn("Skipping perso service call for registration ID: {}. Reason: Signature not present", registrationId);
@@ -625,7 +640,16 @@ public class PrintServiceImpl implements PrintService{
                 String process = (String) eventModel.getEvent().getData().get("registrationType");
                 persoRequestDto.setProcess(process);  // null-safe
             }
-
+            
+            if (persoRequestDto.getProcess() != null && persoRequestDto.getProcess().startsWith("ALIEN")) {
+                String nationalityValue = getAttribute(decryptedJson, "primaryNationality");
+                if (nationalityValue != null && !nationalityValue.isEmpty()) {
+                    String code = getCountryCode(nationalityValue);
+                    persoRequestDto.setNationalityCode(code);
+                    persoRequestDto.setNationality(nationalityValue.toUpperCase());
+                }
+            }
+            
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
 			if (faceCbeff != null) {
@@ -774,7 +798,7 @@ public class PrintServiceImpl implements PrintService{
 		}
 		printLogger.debug("PrintServiceImpl::getDocuments()::exit");
 
-	
+
 		return persoRequestDto;
 	}
 	
@@ -1829,6 +1853,79 @@ public class PrintServiceImpl implements PrintService{
 		} else {
 			printLogger.warn("No card details found for regId {}", regId);
 			return CardStatusMessage.NO_DETAILS.format(regId);
+		}
+	}
+	
+	private CountryMetadata getOrLoadCountryMetadata() {
+	    if (countryMetadata != null && !countryMetadata.countryMap.isEmpty()) {
+	        printLogger.info("Cache HIT for country metadata");
+	        return countryMetadata;
+	    }
+	    printLogger.info("Cache MISS for country metadata. Loading...");
+	    try {
+	        CountryResponseDto response = fetchCountriesFromApi("countries");
+	        Map<String, String> map = Optional.ofNullable(response.getValues())
+	                .orElse(Collections.emptyList())
+	                .stream()
+	                .collect(Collectors.toMap(
+	                        CountryResponseDto.CountryFieldVal::getValue,
+	                        CountryResponseDto.CountryFieldVal::getCode,
+	                        (a, b) -> a ));
+	        CountryMetadata metadata = new CountryMetadata(map);
+	        this.countryMetadata = metadata;
+	        printLogger.info("Loaded and cached country metadata size={}", map.size());
+	        return metadata;
+
+	    } catch (Exception e) {
+	        printLogger.error("Failed to load country metadata", e);
+	        throw new RuntimeException("Failed to load country metadata", e);
+	    }
+	}
+	
+	public String getCountryCode(String nationality) {
+	    if (nationality == null) {
+			return null;
+		}
+	    CountryMetadata metadata = getOrLoadCountryMetadata();
+	    return metadata.countryMap.get(nationality.trim());
+	}
+
+	public CountryResponseDto fetchCountriesFromApi(String fieldName)
+			throws IOException, ApisResourceAccessException {
+		printLogger.info(LoggerFileConstant.SESSIONID.toString(),
+				LoggerFileConstant.USERID.toString(),
+				"", "fetchCountriesFromApi::entry");
+		try {
+			List<String> pathSegments = new ArrayList<>();
+			pathSegments.add(fieldName);
+			pathSegments.add("eng");
+			List<String> queryParamNames = new ArrayList<>();
+			queryParamNames.add("withValue");
+			List<Object> queryParamValues = new ArrayList<>();
+			queryParamValues.add("true");
+			ResponseWrapper<?> responseWrapper =(ResponseWrapper<?>) restClientService.getApi(ApiName.DYNAMIC_FIELD,
+					pathSegments, queryParamNames, queryParamValues, ResponseWrapper.class);
+			if (responseWrapper == null || responseWrapper.getResponse() == null) {
+				throw new RuntimeException("API returned null response");
+			}
+			String json = mapper.writeValueAsString(responseWrapper.getResponse());
+			CountryResponseDto countryResponse = mapper.readValue(
+					json, CountryResponseDto.class);
+
+			if (countryResponse.getValues() == null) {
+				System.out.println("Values is NULL → Query param not applied");
+			} else {
+				System.out.println("Values size: " + countryResponse.getValues().size());
+			}
+			printLogger.info(LoggerFileConstant.SESSIONID.toString(),
+					LoggerFileConstant.USERID.toString(),
+					"", "fetchCountriesFromApi::exit");
+			return countryResponse;
+		} catch (Exception e) {
+			printLogger.error(LoggerFileConstant.SESSIONID.toString(),
+					LoggerFileConstant.USERID.toString(), null,
+					"Error fetching countries: " + e.getMessage());
+			throw new ApisResourceAccessException("Failed to fetch countries", e);
 		}
 	}
 }
