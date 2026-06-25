@@ -35,6 +35,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import java.util.Collections;
@@ -281,6 +283,9 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Value("${print.service.send.data.threads.count:10}")
 	private Integer numberOfThreads;
+
+	@Value("${print.service.send.notification.threads.count:10}")
+	private Integer numberOfNotificationThreads;
 	
 	@Value("${print.service.demo.match.required:true}")
 	private Boolean isDemoMatchRequired;
@@ -312,7 +317,9 @@ public class PrintServiceImpl implements PrintService{
 	private static final String supportedLang = "eng";
 
 	private ExecutorService executorService;
-	
+
+	private ExecutorService notificationExecutorService;
+
 	@Autowired
 	private PersoServiceCaller serviceCaller;
 	
@@ -337,9 +344,19 @@ public class PrintServiceImpl implements PrintService{
 	private CountryMetadata countryMetadata;
 	
 	@PostConstruct
-    public void init() {
-        this.executorService = Executors.newFixedThreadPool(numberOfThreads); 
-    }
+	public void init() {
+		this.executorService = Executors.newFixedThreadPool(numberOfThreads, namedThreadFactory("perso-sender"));
+		this.notificationExecutorService = Executors.newFixedThreadPool(numberOfNotificationThreads, namedThreadFactory("notification-sender"));
+	}
+
+	private ThreadFactory namedThreadFactory(String poolName) {
+		AtomicInteger counter = new AtomicInteger(1);
+		return runnable -> {
+			Thread thread = new Thread(runnable, poolName + "-thread-" + counter.getAndIncrement());
+			thread.setDaemon(true);
+			return thread;
+		};
+	}
 
 	@Scheduled(cron = "${print.service.send.data.cron:0 0/3 * * * ?}")
 	public void sendRecords() {
@@ -371,7 +388,7 @@ public class PrintServiceImpl implements PrintService{
 						}
 					}
 					sendNotification(request.getNin(), request.getTopic(), attributes, request);
-				}, executorService).exceptionally(ex -> {
+				}, notificationExecutorService).exceptionally(ex -> {
 					printLogger.error("Failed to send notification asynchronously: " + ex.getMessage(), ex);
 					return null; 
 				})).collect(Collectors.toList());
