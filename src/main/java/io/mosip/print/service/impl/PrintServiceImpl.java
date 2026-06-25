@@ -642,7 +642,8 @@ public class PrintServiceImpl implements PrintService{
             }
             
             if (persoRequestDto.getProcess() != null && persoRequestDto.getProcess().startsWith("ALIEN")) {
-				persoRequestDto.setFacilityType(getAttribute(decryptedJson, "facilityType"));
+			 	String facilitytypeValue = getAttribute(decryptedJson, "facilityType");
+				persoRequestDto.setFacilityType(facilitytypeValue.toUpperCase());
                 String nationalityValue = getAttribute(decryptedJson, "primaryNationality");
                 if (nationalityValue != null && !nationalityValue.isEmpty()) {
                     String code = getCountryCode(nationalityValue);
