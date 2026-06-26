@@ -659,13 +659,17 @@ public class PrintServiceImpl implements PrintService{
             }
             
             if (persoRequestDto.getProcess() != null && persoRequestDto.getProcess().startsWith("ALIEN")) {
+			 	String facilitytypeValue = getAttribute(decryptedJson, "facilityType");
+				persoRequestDto.setFacilityType(facilitytypeValue.toUpperCase());
                 String nationalityValue = getAttribute(decryptedJson, "primaryNationality");
                 if (nationalityValue != null && !nationalityValue.isEmpty()) {
                     String code = getCountryCode(nationalityValue);
                     persoRequestDto.setNationalityCode(code);
                     persoRequestDto.setNationality(nationalityValue.toUpperCase());
                 }
-            }
+            } else {
+				persoRequestDto.setFacilityType(null);
+			}
             
 			PersoBiometricsDto persoBiometricsDto=new PersoBiometricsDto();
 			String faceCbeff = getString(decryptedJson, "Face");
