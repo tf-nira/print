@@ -400,12 +400,7 @@ public class PrintServiceImpl implements PrintService{
 			if (eventModel.getEvent().getDataShareUri() == null || eventModel.getEvent().getDataShareUri().isEmpty()) {
 				credential = eventModel.getEvent().getData().get("credential").toString();
 			} else {
-
 				String dataShareUrl = eventModel.getEvent().getDataShareUri();
-				dataShareUrl = dataShareUrl.replace(
-						"http://datashare.datashare",
-						"https://api-internal-preprod.nsis.nira.go.ug"
-				);
 				URI dataShareUri = URI.create(dataShareUrl);
 				credential = restApiClient.getApi(dataShareUri, String.class);
 			}
@@ -836,7 +831,6 @@ public class PrintServiceImpl implements PrintService{
 		cardDetail.setEventData(new ObjectMapper().writeValueAsString(eventModel));
 		String process = (String) eventModel.getEvent().getData().get("registrationType");
 		//Need to change to true once data correct confirmed
-
 		cardDetail.setIsReadyToPush(isReadyToPush(cardDetail, process));
 		cardDetail.setIsPushed(false);
 		cardDetail.setIsFailed(false);
@@ -850,9 +844,8 @@ public class PrintServiceImpl implements PrintService{
 		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
 			return true;
 		}
-		
-		boolean isReadyToPush = false;
 
+		boolean isReadyToPush = false;
 		try {
 			printLogger.info("Calling migration api for demographic match");
 			RequestWrapper<NinDetailsRequest> requestWrapper = new RequestWrapper<>();
@@ -1840,7 +1833,8 @@ public class PrintServiceImpl implements PrintService{
 
 			if (Boolean.TRUE.equals(cardDetail.getIsReadyToPush())
 					&& !Boolean.TRUE.equals(cardDetail.getIsProcessing())
-					) {
+					&& !Boolean.TRUE.equals(cardDetail.getIsPushed())
+					&& cardDetail.getRemark() == null) {
 				processSingleRequest(cardDetail);
 			}
 
