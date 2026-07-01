@@ -854,12 +854,15 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
+		if (process != null && process.startsWith("ALIEN")) {
+			return false;
+		}
+
 		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
 			return true;
 		}
-		
+
 		boolean isReadyToPush = false;
-		
 		try {
 			printLogger.info("Calling migration api for demographic match");
 			RequestWrapper<NinDetailsRequest> requestWrapper = new RequestWrapper<>();
