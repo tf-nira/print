@@ -376,7 +376,19 @@ public class PrintServiceImpl implements PrintService{
 					return null; 
 				})).collect(Collectors.toList());
 	}
-	
+
+	@Scheduled(cron = "${print.service.reset.stuck.cards.cron:0 0 0 * * ?}")
+	public void resetStuckCardDetailRecords() {
+		printLogger.info("Starting batch job for resetting stuck card_detail records");
+		try {
+			int affectedRecords = cardDetailDao.resetStuckCardDetailRecords();
+			printLogger.info("Reset stuck card_detail records: " + affectedRecords);
+		} catch (Exception e) {
+			printLogger.error("Failed to reset stuck card_detail records: " + e.getMessage(), e);
+		}
+		printLogger.info("Completed batch job for resetting stuck card_detail records");
+	}
+
 	private Object processSingleRequest(CardDetail request) {
 		try {
 			// Check if this record is in the exclusion list — skip sending to perso
