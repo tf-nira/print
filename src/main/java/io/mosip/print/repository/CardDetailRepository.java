@@ -22,7 +22,7 @@ public interface CardDetailRepository extends JpaRepository<CardDetail, String> 
 	public void markAsProcessing(@Param("ids") List<String> ids);
 
 	@Modifying
-	@Query(value = "UPDATE print.card_detail SET remark = NULL, is_failed = false WHERE remark = 'New Request While There Is Existing In Progress Request'", nativeQuery = true)
+	@Query(value = "UPDATE print.card_detail SET remark = NULL, is_failed = false WHERE remark LIKE '%New Request%'", nativeQuery = true)
 	public int resetStuckCardDetailRecords();
 
 	List<CardDetail> findByRegId(String regId);
