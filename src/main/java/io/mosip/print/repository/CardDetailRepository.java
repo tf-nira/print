@@ -21,6 +21,10 @@ public interface CardDetailRepository extends JpaRepository<CardDetail, String> 
 	@Query(value = "UPDATE print.card_detail SET is_processing = true WHERE transaction_id IN (:ids)", nativeQuery = true)
 	public void markAsProcessing(@Param("ids") List<String> ids);
 
+	@Modifying
+	@Query(value = "UPDATE print.card_detail SET remark = NULL, is_failed = false WHERE remark LIKE '%New Request%'", nativeQuery = true)
+	public int resetStuckCardDetailRecords();
+
 	List<CardDetail> findByRegId(String regId);
 
 	List<CardDetail> findByNin(String nin);
