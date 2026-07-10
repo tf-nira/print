@@ -377,7 +377,7 @@ public class PrintServiceImpl implements PrintService{
 				})).collect(Collectors.toList());
 	}
 
-	@Scheduled(cron = "${print.service.reset.stuck.cards.cron:0 0 0 * * ?}")
+	@Scheduled(cron = "${print.service.reset.stuck.cards.cron:0 */10 * * * ?}")
 	public void resetStuckCardDetailRecords() {
 		printLogger.info("Starting batch job for resetting stuck card_detail records");
 		try {
