@@ -48,6 +48,11 @@ public class CardDetailDao {
 	}
 
 	@Transactional
+	public int resetStuckCardDetailRecords() {
+	    return cardDetailRepository.resetStuckCardDetailRecords();
+	}
+
+	@Transactional
 	public List<CardDetail> fetchCardDetailByRegId(String regId) {
 		return cardDetailRepository.findByRegId(regId);
 	}
