@@ -924,12 +924,23 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isDemographicMatch(CardDetail cardDetail, DemographicDto demo) {
-	    return Objects.equals(cardDetail.getNin(), demo.getNin())
-	        && Objects.equals(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
-	        && Objects.equals(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
-	        && Objects.equals(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
-	        && Objects.equals(cardDetail.getSex(), getFirstValue(demo.getGender()).equals("Male") ? "M" : "F")
-	        && Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
+		return isNameMatch(cardDetail.getNin(), demo.getNin())
+				&& isNameMatch(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
+				&& isNameMatch(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
+				&& isNameMatch(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
+				&& isNameMatch(cardDetail.getSex(), getFirstValue(demo.getGender()).equals("Male") ? "M" : "F")
+				&& Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
+	}
+
+	private boolean isNameMatch(String value1, String value2) {
+		return Objects.equals(normalizeName(value1), normalizeName(value2));
+	}
+	
+	private String normalizeName(String value) {
+		if (value == null) {
+			return null;
+		}
+		return value.trim().replaceAll("\\s+", " ").toLowerCase();
 	}
 	
 	private String getFirstValue(String jsonArrayAsString) {
