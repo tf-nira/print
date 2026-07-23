@@ -934,7 +934,10 @@ public class PrintServiceImpl implements PrintService{
 	}
 
 	private boolean isNameMatch(String value1, String value2) {
-		return Objects.equals(normalizeName(value1), normalizeName(value2));
+		String noramalizeCardName=normalizeName(value1);
+		String normalizeMigratorName=normalizeName(value2);
+		printLogger.info("noramalizeCardName  &&&&&:" + noramalizeCardName +"      normalizeMigratorName  -------:"+normalizeMigratorName);
+		return Objects.equals(noramalizeCardName, normalizeMigratorName);
 	}
 
 	private String normalizeName(String value) {
