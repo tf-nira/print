@@ -925,11 +925,11 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isDemographicMatch(CardDetail cardDetail, DemographicDto demo) {
-		return isNameMatch(cardDetail.getNin(), demo.getNin())
+		return isIdentifierMatch(cardDetail.getNin(), demo.getNin())
 				&& isNameMatch(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
 				&& isNameMatch(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
 				&& isNameMatch(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
-				&& isNameMatch(cardDetail.getSex(), getFirstValue(demo.getGender()).equals("Male") ? "M" : "F")
+				&& isIdentifierMatch(cardDetail.getSex(), getFirstValue(demo.getGender()).equals("Male") ? "M" : "F")
 				&& Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
 	}
 
@@ -941,10 +941,20 @@ public class PrintServiceImpl implements PrintService{
 		if (value == null) {
 			return null;
 		}
-		String cleaned = value.trim().replaceAll("\\s+", " ");
-		String decomposed = Normalizer.normalize(cleaned, Normalizer.Form.NFD);
-		String withoutDiacritics = decomposed.replaceAll("\\p{M}", "");
-		return withoutDiacritics.toLowerCase();
+		String decomposed = Normalizer.normalize(value, Normalizer.Form.NFD);
+		String diacriticsStripped = decomposed.replaceAll("\\p{M}", "");
+		return diacriticsStripped.replaceAll("[^a-zA-Z]", "").toLowerCase();
+	}
+	
+	private boolean isIdentifierMatch(String value1, String value2) {
+		return Objects.equals(normalizeIdentifier(value1), normalizeIdentifier(value2));
+	}
+	
+	private String normalizeIdentifier(String value) {
+		if (value == null) {
+			return null;
+		}
+		return value.trim().replaceAll("\\s+", "").toLowerCase();
 	}
 	
 	private String getFirstValue(String jsonArrayAsString) {
