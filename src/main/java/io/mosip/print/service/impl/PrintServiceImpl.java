@@ -16,6 +16,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Timestamp;
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -940,7 +941,10 @@ public class PrintServiceImpl implements PrintService{
 		if (value == null) {
 			return null;
 		}
-		return value.trim().replaceAll("\\s+", " ").toLowerCase();
+		String cleaned = value.trim().replaceAll("\\s+", " ");
+		String decomposed = Normalizer.normalize(cleaned, Normalizer.Form.NFD);
+		String withoutDiacritics = decomposed.replaceAll("\\p{M}", "");
+		return withoutDiacritics.toLowerCase();
 	}
 	
 	private String getFirstValue(String jsonArrayAsString) {
