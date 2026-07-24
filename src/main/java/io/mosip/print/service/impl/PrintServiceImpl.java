@@ -937,8 +937,22 @@ public class PrintServiceImpl implements PrintService{
 		String noramalizeCardName=normalizeName(value1);
 		String normalizeMigratorName=normalizeName(value2);
 		printLogger.info("CardName  &&&&&:" + value1 +"      MigratorName  -------:"+value2);
+		printLogger.info("Card Unicode  : {}", toUnicode(value1));
+		printLogger.info("Migrator Unicode  : {}", toUnicode(value2));
 		printLogger.info("noramalizeCardName  &&&&&:" + noramalizeCardName +"      normalizeMigratorName  -------:"+normalizeMigratorName);
 		return Objects.equals(noramalizeCardName, normalizeMigratorName);
+	}
+
+	private String toUnicode(String s) {
+		if (s == null) return "null";
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < s.length(); i++) {
+			sb.append(String.format("\\u%04X", (int) s.charAt(i)));
+			if (i < s.length() - 1) {
+				sb.append(" ");
+			}
+		}
+		return sb.toString();
 	}
 
 	private String normalizeName(String value) {
