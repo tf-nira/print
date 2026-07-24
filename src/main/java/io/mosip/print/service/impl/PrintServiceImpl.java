@@ -454,6 +454,18 @@ public class PrintServiceImpl implements PrintService{
 				cardDetailRepository.save(request);
 				return null;
 			}
+			printLogger.info("Perso Request JUST BEFORE SEND - givenName: {} | unicode: {}",
+					persoRequestDto.getGivenName(), toUnicode(persoRequestDto.getGivenName()));
+			printLogger.info("Perso Request JUST BEFORE SEND - surname: {} | unicode: {}",
+					persoRequestDto.getSurName(), toUnicode(persoRequestDto.getSurName()));
+			printLogger.info("Perso Request JUST BEFORE SEND - otherName: {} | unicode: {}",
+					persoRequestDto.getOtherName(), toUnicode(persoRequestDto.getOtherName()));
+			try {
+				String rawJson = new ObjectMapper().writeValueAsString(persoRequestDto);
+				printLogger.info("Perso Request FULL JSON PAYLOAD: {}", rawJson);
+			} catch (JsonProcessingException e) {
+				printLogger.error("Could not serialize persoRequestDto for logging", e);
+			}
 
 			String response = serviceCaller.callPersoService(persoRequestDto);
 
@@ -618,20 +630,26 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setDateOfExpiry(getString(decryptedJson, "dateOfExpiry"));
 			persoRequestDto.setNationality(getString(decryptedJson, "Nationality"));
 			String givenName = getAttribute(decryptedJson, "givenName");
+			printLogger.info("Decrypted givenName (raw): {} | unicode: {}", givenName, toUnicode(givenName));
 			if (givenName != null) {
 				persoRequestDto.setGivenName(givenName.toUpperCase());
+				printLogger.info("givenName after toUpperCase: {} | unicode: {}", persoRequestDto.getGivenName(), toUnicode(persoRequestDto.getGivenName()));
 			} else {
 				persoRequestDto.setGivenName(givenName);
 			}
 			String otherNames = getAttribute(decryptedJson, "otherNames");
+			printLogger.info("Decrypted otherNames (raw): {} | unicode: {}", otherNames, toUnicode(otherNames));
 			if (otherNames != null) {
 				persoRequestDto.setOtherName(otherNames.toUpperCase());
+				printLogger.info("otherName after toUpperCase: {} | unicode: {}", persoRequestDto.getOtherName(), toUnicode(persoRequestDto.getOtherName()));
 			} else {
 				persoRequestDto.setOtherName(otherNames);
 			}
 			String surname = getAttribute(decryptedJson, "surname");
+			printLogger.info("Decrypted surname (raw): {} | unicode: {}", surname, toUnicode(surname));
 			if (surname != null) {
 				persoRequestDto.setSurName(surname.toUpperCase());
+				printLogger.info("surname after toUpperCase: {} | unicode: {}", persoRequestDto.getSurName(), toUnicode(persoRequestDto.getSurName()));
 			} else {
 				persoRequestDto.setSurName(surname);
 			}
