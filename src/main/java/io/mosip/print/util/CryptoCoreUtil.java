@@ -72,7 +72,7 @@ public class CryptoCoreUtil {
 			PrivateKeyEntry privateKeyEntry = loadP12();
 			byte[] dataBytes = org.apache.commons.codec.binary.Base64.decodeBase64(data);
 			byte[] decryptedDataBytes = decryptData(dataBytes, privateKeyEntry);
-			return new String(decryptedDataBytes);
+			return new String(decryptedDataBytes,java.nio.charset.StandardCharsets.UTF_8);
 		}catch (Exception e){
 			e.printStackTrace();
 			printLogger.error( "Not able to decrypt the data : {}", e);
