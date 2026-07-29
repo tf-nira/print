@@ -16,6 +16,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Timestamp;
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -944,12 +945,38 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isDemographicMatch(CardDetail cardDetail, DemographicDto demo) {
-	    return Objects.equals(cardDetail.getNin(), demo.getNin())
-	        && Objects.equals(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
-	        && Objects.equals(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
-	        && Objects.equals(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
-	        && Objects.equals(cardDetail.getSex(), getFirstValue(demo.getGender()).equals("Male") ? "M" : "F")
-	        && Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
+		return isIdentifierMatch(cardDetail.getNin(), demo.getNin())
+				&& isNameMatch(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
+				&& isNameMatch(cardDetail.getSurname(), getFirstValue(demo.getSurname()))
+				&& isNameMatch(cardDetail.getOtherName(), getFirstValue(demo.getOtherNames()))
+				&& isIdentifierMatch(cardDetail.getSex(), getFirstValue(demo.getGender()).equals("Male") ? "M" : "F")
+				&& Objects.equals(cardDetail.getDateOfBirth(), demo.getDateOfBirth());
+	}
+
+	private boolean isNameMatch(String value1, String value2) {
+		String noramalizeCardName=normalizeName(value1);
+		String normalizeMigratorName=normalizeName(value2);
+		return Objects.equals(noramalizeCardName, normalizeMigratorName);
+	}
+
+	private String normalizeName(String value) {
+		if (value == null) {
+			return null;
+		}
+		String decomposed = Normalizer.normalize(value, Normalizer.Form.NFD);
+		String diacriticsStripped = decomposed.replaceAll("\\p{M}", "");
+		return diacriticsStripped.replaceAll("[^a-zA-Z]", "").toLowerCase();
+	}
+
+	private boolean isIdentifierMatch(String value1, String value2) {
+		return Objects.equals(normalizeIdentifier(value1), normalizeIdentifier(value2));
+	}
+
+	private String normalizeIdentifier(String value) {
+		if (value == null) {
+			return null;
+		}
+		return value.trim().replaceAll("\\s+", "").toLowerCase();
 	}
 	
 	private String getFirstValue(String jsonArrayAsString) {
