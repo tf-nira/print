@@ -18,7 +18,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.sql.Timestamp;
 import java.text.Normalizer;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -460,8 +462,14 @@ public class PrintServiceImpl implements PrintService{
 
 			// printLogger.info("Perso Request for id : {} is : {}", request.getRegId(), persoRequestDto);
 			
+			//Skip signature validation for ALIEN applicants younger than 16
+			String process = (String) eventModel.getEvent().getData().get("registrationType");
+			LocalDate dob = LocalDate.parse(request.getDateOfBirth());
+			int age = Period.between(dob, LocalDate.now()).getYears();
+			boolean skipSignatureValidation = process != null && process.startsWith("ALIEN") && age < 16;
+
 			// Skip sending to perso service if signature is null
-			if (persoRequestDto.getBiometrics().getSignature() == null) {
+			if (persoRequestDto.getBiometrics().getSignature() == null && !skipSignatureValidation) {
                 printLogger.warn("Skipping perso service call for registration ID: {}. Reason: Signature not present", registrationId);
 				request.setIsProcessing(false);
 				request.setIsFailed(true);
@@ -867,9 +875,6 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
-		if (process != null && process.startsWith("ALIEN")) {
-			return false;
-		}
 
 		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
 			return true;
