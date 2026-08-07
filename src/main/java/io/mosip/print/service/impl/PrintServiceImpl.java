@@ -17,7 +17,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.sql.Timestamp;
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.text.SimpleDateFormat;
+import java.time.Period;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -683,7 +685,19 @@ public class PrintServiceImpl implements PrintService{
 				persoBiometricsDto.setRightIris(null);
 			}
 			String signature = getString(decryptedJson, "signature");
-			if (signature != null && signature.equalsIgnoreCase("Unable to Sign")) {
+			String process = persoRequestDto.getProcess();
+			boolean isAlienMinor = false;
+			if (process != null && process.startsWith("ALIEN") && persoRequestDto.getDateOfBirth() != null) {
+				try {
+					LocalDate dob = LocalDate.parse(persoRequestDto.getDateOfBirth());
+					int age = Period.between(dob, LocalDate.now()).getYears();
+					isAlienMinor = age < 16;
+				} catch (Exception e) {
+					printLogger.warn("Could not parse dateOfBirth for alien-minor signature check, regId={}: {}",
+							registrationId, e.getMessage());
+				}
+			}
+			if (isAlienMinor||(signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
 				InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile);
 				byte[] signatureBytes = in.readAllBytes();
 				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
