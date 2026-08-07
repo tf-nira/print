@@ -154,6 +154,7 @@ import io.mosip.print.util.RestApiClient;
 import io.mosip.print.util.TemplateGenerator;
 import io.mosip.print.util.Utilities;
 import io.mosip.print.util.WebSubSubscriptionHelper;
+import java.time.format.DateTimeParseException;
 
 @Service
 public class PrintServiceImpl implements PrintService{
@@ -706,12 +707,16 @@ public class PrintServiceImpl implements PrintService{
 			boolean isAlienMinor = false;
 			if (process != null && process.startsWith("ALIEN") && persoRequestDto.getDateOfBirth() != null) {
 				try {
-					LocalDate dob = LocalDate.parse(persoRequestDto.getDateOfBirth());
+					LocalDate dob = parseDateOfBirth(persoRequestDto.getDateOfBirth());
 					int age = Period.between(dob, LocalDate.now()).getYears();
 					isAlienMinor = age < 16;
 				} catch (Exception e) {
-					printLogger.warn("Could not parse dateOfBirth for alien-minor signature check, regId={}: {}",
-							registrationId, e.getMessage());
+					printLogger.warn(
+							"Could not parse dateOfBirth '{}' for alien-minor signature check, regId={}: {}",
+							persoRequestDto.getDateOfBirth(),
+							registrationId,
+							e.getMessage()
+					);
 				}
 			}
 			if (isAlienMinor||(signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
@@ -2004,5 +2009,31 @@ public class PrintServiceImpl implements PrintService{
 					"Error fetching countries: " + e.getMessage());
 			throw new ApisResourceAccessException("Failed to fetch countries", e);
 		}
+	}
+	private LocalDate parseDateOfBirth(String dateOfBirth) {
+		if (dateOfBirth == null || dateOfBirth.trim().isEmpty()) {
+			return null;
+		}
+
+		DateTimeFormatter[] formatters = {
+				DateTimeFormatter.ISO_LOCAL_DATE,                 // yyyy-MM-dd
+				DateTimeFormatter.ofPattern("dd/MM/yyyy"),        // 01/01/2016
+				DateTimeFormatter.ofPattern("MM/dd/yyyy"),        // 01/31/2016
+				DateTimeFormatter.ofPattern("dd-MM-yyyy"),        // 01-01-2016
+				DateTimeFormatter.ofPattern("yyyy/MM/dd")         // 2016/01/01
+		};
+
+		for (DateTimeFormatter formatter : formatters) {
+			try {
+				return LocalDate.parse(dateOfBirth.trim(), formatter);
+			} catch (DateTimeParseException ignored) {
+			}
+		}
+
+		throw new DateTimeParseException(
+				"Unsupported date format",
+				dateOfBirth,
+				0
+		);
 	}
 }
