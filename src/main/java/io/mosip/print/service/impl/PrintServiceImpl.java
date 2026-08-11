@@ -52,6 +52,7 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 
+import io.mosip.print.util.LocationUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.joda.time.DateTime;
 import org.json.simple.JSONArray;
@@ -616,23 +617,29 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setApplicantForeignResidenceCountry(
 					getAttribute(decryptedJson, "applicantForeignResidenceCountry"));
 			PersoAddressDto persoAddressDto=new PersoAddressDto();
-			persoAddressDto.setCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceCounty"));
-			persoAddressDto.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfResidenceDistrict"));
-			persoAddressDto.setSubCounty(getAttribute(decryptedJson, "applicantPlaceOfResidenceSubCounty"));
-			persoAddressDto.setParish(DataUtil
-					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfResidenceParish")));
-			persoAddressDto.setVillage(DataUtil
-					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfResidenceVillage")));
+			persoAddressDto.setCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfResidenceCounty")));
+			persoAddressDto.setDistrict(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfResidenceDistrict")));
+			persoAddressDto.setSubCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfResidenceSubCounty")));
+			persoAddressDto.setParish(LocationUtil.trimExtraSpaces(DataUtil
+					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfResidenceParish"))));
+			persoAddressDto.setVillage(LocationUtil.trimExtraSpaces(DataUtil
+					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfResidenceVillage"))));
 			persoRequestDto.setAddress(persoAddressDto);
+			printLogger.info("Place of Residence after trim - district={}, county={}, subCounty={}, parish={}, village={}",
+					persoAddressDto.getDistrict(), persoAddressDto.getCounty(), persoAddressDto.getSubCounty(),
+					persoAddressDto.getParish(), persoAddressDto.getVillage());
 
 			PersoEnrollmenetAddressDTO persoEnrollmenetAddressDTO=new PersoEnrollmenetAddressDTO();
-			persoEnrollmenetAddressDTO.setCounty(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentCounty"));
-			persoEnrollmenetAddressDTO.setDistrict(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentDistrict"));
-			persoEnrollmenetAddressDTO.setSubCounty(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentSubCounty"));
-			persoEnrollmenetAddressDTO.setParish(DataUtil.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentParish")));
-			persoEnrollmenetAddressDTO.setVillage(DataUtil
-					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentVillage")));
+			persoEnrollmenetAddressDTO.setCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentCounty")));
+			persoEnrollmenetAddressDTO.setDistrict(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentDistrict")));
+			persoEnrollmenetAddressDTO.setSubCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentSubCounty")));
+			persoEnrollmenetAddressDTO.setParish(LocationUtil.trimExtraSpaces(DataUtil.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentParish"))));
+			persoEnrollmenetAddressDTO.setVillage(LocationUtil.trimExtraSpaces(DataUtil
+					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentVillage"))));
 			persoRequestDto.setPlaceOfEnrollment(persoEnrollmenetAddressDTO);
+			printLogger.info("Place of Enrolment after trim - district={}, county={}, subCounty={}, parish={}, village={}",
+					persoEnrollmenetAddressDTO.getDistrict(), persoEnrollmenetAddressDTO.getCounty(), persoEnrollmenetAddressDTO.getSubCounty(),
+					persoEnrollmenetAddressDTO.getParish(), persoEnrollmenetAddressDTO.getVillage());
 
 			persoRequestDto.setDateOfIssuance(getString(decryptedJson, "dateOfIssuance"));
 			persoRequestDto.setDateOfExpiry(getString(decryptedJson, "dateOfExpiry"));
