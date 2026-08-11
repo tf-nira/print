@@ -1,0 +1,20 @@
+package io.mosip.print.util;
+
+import org.slf4j.Logger;
+
+import io.mosip.print.logger.PrintLogger;
+
+public class LocationUtil {
+
+    private static final Logger printLogger = PrintLogger.getLogger(LocationUtil.class);
+
+    private LocationUtil() {
+    }
+
+    public static String trimExtraSpaces(String inputData) {
+        if (inputData != null) {
+            return inputData.replaceAll("\\s+", " ").trim();
+        }
+        return inputData;
+    }
+}
