@@ -872,10 +872,14 @@ public class PrintServiceImpl implements PrintService{
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
 
 		if (process != null && process.startsWith("ALIEN")) {
-			if (isExpiryLessThanTenYears(cardDetail.getDateOfExpiry())) {
-				return true;
+			boolean expiryLessThanTenYears =
+					isExpiryLessThanTenYears(cardDetail.getDateOfExpiry());
+			if (!expiryLessThanTenYears) {
+				cardDetail.setRemark(
+						"Date of expiry is more than 10 years :: Id-Repo update :: Action Needed"
+				);
 			}
-			return false;
+			return expiryLessThanTenYears;
 		}
 		
 		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
