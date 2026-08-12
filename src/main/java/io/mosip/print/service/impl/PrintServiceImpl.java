@@ -894,6 +894,13 @@ public class PrintServiceImpl implements PrintService{
 	
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
 
+		if (process != null && process.startsWith("ALIEN")) {
+			if (isExpiryLessThanTenYears(cardDetail.getDateOfExpiry())) {
+				return true;
+			}
+			return false;
+		}
+
 		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
 			return true;
 		}
@@ -2040,5 +2047,22 @@ public class PrintServiceImpl implements PrintService{
 				dateOfBirth,
 				0
 		);
+	}
+
+	private boolean isExpiryLessThanTenYears(String dateOfExpiry) {
+		if (dateOfExpiry == null || dateOfExpiry.trim().isEmpty()) {
+			return false;
+		}
+		try {
+			LocalDate expiryDate = parseDateOfBirth(dateOfExpiry);
+			return expiryDate.isBefore(LocalDate.now().plusYears(10));
+		} catch (Exception e) {
+			printLogger.warn(
+					"Unable to parse dateOfExpiry '{}' for ALIEN application",
+					dateOfExpiry,
+					e
+			);
+			return false;
+		}
 	}
 }
