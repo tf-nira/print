@@ -2046,7 +2046,7 @@ public class PrintServiceImpl implements PrintService{
 		try {
 			LocalDate issuanceDate = parseDateOfBirth(dateOfIssuance);
 			LocalDate expiryDate = parseDateOfBirth(dateOfExpiry);
-			LocalDate maxExpiryDate = issuanceDate.plusYears(10);
+			LocalDate maxExpiryDate = issuanceDate.plusYears(10).minusDays(1);
 
 			if (maxExpiryDate.isBefore(expiryDate)) {
 				String newExpiryDateStr = maxExpiryDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
