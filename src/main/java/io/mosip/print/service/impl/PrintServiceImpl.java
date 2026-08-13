@@ -462,7 +462,7 @@ public class PrintServiceImpl implements PrintService{
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
-			// printLogger.info("Perso Request for id : {} is : {}", request.getRegId(), persoRequestDto);
+			 printLogger.info("Card Expiry for id : {} is : {}", request.getRegId(), persoRequestDto.getDateOfExpiry());
 			
 			// Skip sending to perso service if signature is null
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
@@ -604,6 +604,7 @@ public class PrintServiceImpl implements PrintService{
 
 		boolean isTransactionSuccessful = false;
 
+		String cappedAlienExpiry = null;
 
 		try {
 			credentialSubject = getCrdentialSubject(credential);
@@ -684,6 +685,8 @@ public class PrintServiceImpl implements PrintService{
                     persoRequestDto.setNationalityCode(code);
                     persoRequestDto.setNationality(nationalityValue.toUpperCase());
                 }
+
+                cappedAlienExpiry = capAlienExpiry(persoRequestDto);
             } else {
 				persoRequestDto.setFacilityType(null);
 			}
@@ -807,8 +810,9 @@ public class PrintServiceImpl implements PrintService{
 						CardDetail cardDetail = new CardDetail();
 						populateCardDetail(cardDetail, persoRequestDto, registrationId, eventModel);
 
-						if (persoRequestDto.getProcess().startsWith("ALIEN")) {
-							checkDateOfExpiry(persoRequestDto, cardDetail);
+						if (cappedAlienExpiry != null) {
+							cardDetail.setRemark("Date of Expiry adjusted to 10 years from Date of Issuance");
+							cardDetail.setIsReadyToPush(true);
 						}
 						cardDetail.setCreatedBy("SYSTEM");
 						cardDetail.setCrDTimes(LocalDateTime.now());
@@ -2039,25 +2043,21 @@ public class PrintServiceImpl implements PrintService{
 		);
 	}
 
-	private void checkDateOfExpiry (PersoRequestDto persoRequestDto, CardDetail cardDetail) {
-		String dateOfIssuance = persoRequestDto.getDateOfIssuance();
-		String dateOfExpiry = persoRequestDto.getDateOfExpiry();
-
+	private String capAlienExpiry(PersoRequestDto persoRequestDto) {
 		try {
-			LocalDate issuanceDate = parseDateOfBirth(dateOfIssuance);
-			LocalDate expiryDate = parseDateOfBirth(dateOfExpiry);
+			LocalDate issuanceDate = parseDateOfBirth(persoRequestDto.getDateOfIssuance());
+			LocalDate expiryDate = parseDateOfBirth(persoRequestDto.getDateOfExpiry());
 			LocalDate maxExpiryDate = issuanceDate.plusYears(10).minusDays(1);
 
 			if (maxExpiryDate.isBefore(expiryDate)) {
 				String newExpiryDateStr = maxExpiryDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
 				persoRequestDto.setDateOfExpiry(newExpiryDateStr);
-				cardDetail.setDateOfExpiry(newExpiryDateStr);
-				cardDetail.setRemark("Date of Expiry adjusted to 10 years from Date of Issuance");
-				cardDetail.setIsReadyToPush(true);
+				return newExpiryDateStr;
 			}
 
 		} catch (Exception e) {
 			printLogger.warn("Unable to parse dateOfExpiry/dateOfIssuance for ALIEN application", e);
 		}
+		return null;
 	}
 }
