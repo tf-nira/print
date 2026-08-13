@@ -806,6 +806,10 @@ public class PrintServiceImpl implements PrintService{
 						printLogger.info("Saving new card details");
 						CardDetail cardDetail = new CardDetail();
 						populateCardDetail(cardDetail, persoRequestDto, registrationId, eventModel);
+
+						if (persoRequestDto.getProcess().startsWith("ALIEN")) {
+							checkDateOfExpiry(persoRequestDto, cardDetail);
+						}
 						cardDetail.setCreatedBy("SYSTEM");
 						cardDetail.setCrDTimes(LocalDateTime.now());
 
@@ -887,18 +891,6 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
-
-		if (process != null && process.startsWith("ALIEN")) {
-			boolean expiryLessThanTenYears =
-					isExpiryLessThanTenYears(cardDetail.getDateOfExpiry());
-			if (!expiryLessThanTenYears) {
-				cardDetail.setRemark(
-						"Date of expiry is more than 10 years :: Id-Repo update :: Action Needed"
-				);
-			}
-			return expiryLessThanTenYears;
-		}
-
 		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
 			return true;
 		}
@@ -2047,20 +2039,25 @@ public class PrintServiceImpl implements PrintService{
 		);
 	}
 
-	private boolean isExpiryLessThanTenYears(String dateOfExpiry) {
-		if (dateOfExpiry == null || dateOfExpiry.trim().isEmpty()) {
-			return false;
-		}
+	private void checkDateOfExpiry (PersoRequestDto persoRequestDto, CardDetail cardDetail) {
+		String dateOfIssuance = persoRequestDto.getDateOfIssuance();
+		String dateOfExpiry = persoRequestDto.getDateOfExpiry();
+
 		try {
+			LocalDate issuanceDate = parseDateOfBirth(dateOfIssuance);
 			LocalDate expiryDate = parseDateOfBirth(dateOfExpiry);
-			return expiryDate.isBefore(LocalDate.now().plusYears(10));
+			LocalDate maxExpiryDate = issuanceDate.plusYears(10).minusDays(1);
+
+			if (maxExpiryDate.isBefore(expiryDate)) {
+				String newExpiryDateStr = maxExpiryDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+				persoRequestDto.setDateOfExpiry(newExpiryDateStr);
+				cardDetail.setDateOfExpiry(newExpiryDateStr);
+				cardDetail.setRemark("Date of Expiry adjusted to 10 years from Date of Issuance");
+				cardDetail.setIsReadyToPush(true);
+			}
+
 		} catch (Exception e) {
-			printLogger.warn(
-					"Unable to parse dateOfExpiry '{}' for ALIEN application",
-					dateOfExpiry,
-					e
-			);
-			return false;
+			printLogger.warn("Unable to parse dateOfExpiry/dateOfIssuance for ALIEN application", e);
 		}
 	}
 }
