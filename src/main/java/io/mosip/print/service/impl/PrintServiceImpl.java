@@ -465,8 +465,10 @@ public class PrintServiceImpl implements PrintService{
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
-			printLogger.info("Card Details Face for id : {} is : {}", request.getRegId(), persoRequestDto.getBiometrics().getFaceImagePortrait());
-			printLogger.info("Card Details Signature for id : {} is : {}", request.getRegId(), persoRequestDto.getBiometrics().getSignature());
+			if (persoRequestDto.getProcess().startsWith("ALIEN")) {
+				printLogger.info("Card Details Face for id : {} is : {}", request.getRegId(), persoRequestDto.getBiometrics().getFaceImagePortrait());
+				printLogger.info("Card Details Signature for id : {} is : {}", request.getRegId(), persoRequestDto.getBiometrics().getSignature());
+			}
 			
 			// Skip sending to perso service if signature is null
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
@@ -713,7 +715,7 @@ public class PrintServiceImpl implements PrintService{
 			String signature = getString(decryptedJson, "signature");
 			String process = persoRequestDto.getProcess();
 			String ageGroup = null;
-			if (process != null && process.startsWith("ALIEN") && persoRequestDto.getDateOfBirth() != null) {
+			if (process != null && process.startsWith("ALIEN")) {
 				try {
 					List<String> tags = new ArrayList<>();
 					tags.add("AGE_GROUP");
@@ -722,8 +724,7 @@ public class PrintServiceImpl implements PrintService{
 
 				} catch (Exception e) {
 					printLogger.warn(
-							"Could not parse dateOfBirth '{}' for alien-minor signature check, regId={}: {}",
-							persoRequestDto.getDateOfBirth(),
+							"Could not fetch AGE_GROUP tag for regId={}. Proceeding without it. Error: {}",
 							registrationId,
 							e.getMessage()
 					);
