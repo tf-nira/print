@@ -279,6 +279,9 @@ public class PrintServiceImpl implements PrintService{
 
 	@Value("${mosip.print.signature.filename:signature.png}")
 	private String signatureFile;
+
+	@Value("${mosip.print.face.filename:face.png}")
+	private String faceFile;
 	
 	@Value("${print.service.send.data.fetchsize:5}")
 	private Integer fetchSize;
@@ -462,7 +465,8 @@ public class PrintServiceImpl implements PrintService{
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
-			 printLogger.info("Card Expiry for id : {} is : {}", request.getRegId(), persoRequestDto.getDateOfExpiry());
+			printLogger.info("Card Details Face for id : {} is : {}", request.getRegId(), persoRequestDto.getBiometrics().getFaceImagePortrait());
+			printLogger.info("Card Details Signature for id : {} is : {}", request.getRegId(), persoRequestDto.getBiometrics().getSignature());
 			
 			// Skip sending to perso service if signature is null
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
@@ -708,12 +712,14 @@ public class PrintServiceImpl implements PrintService{
 			}
 			String signature = getString(decryptedJson, "signature");
 			String process = persoRequestDto.getProcess();
-			boolean isAlienMinor = false;
+			String ageGroup = null;
 			if (process != null && process.startsWith("ALIEN") && persoRequestDto.getDateOfBirth() != null) {
 				try {
-					LocalDate dob = parseDateOfBirth(persoRequestDto.getDateOfBirth());
-					int age = Period.between(dob, LocalDate.now()).getYears();
-					isAlienMinor = age < 16;
+					List<String> tags = new ArrayList<>();
+					tags.add("AGE_GROUP");
+					Map<String, String> tagsPresent = utilities.getTags(registrationId, tags);
+					ageGroup = tagsPresent.get("AGE_GROUP");
+
 				} catch (Exception e) {
 					printLogger.warn(
 							"Could not parse dateOfBirth '{}' for alien-minor signature check, regId={}: {}",
@@ -723,7 +729,19 @@ public class PrintServiceImpl implements PrintService{
 					);
 				}
 			}
-			if (isAlienMinor||(signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
+
+			if ((ageGroup != null && ageGroup.equals("CHILD"))) {
+				if (persoBiometricsDto.getFaceImagePortrait() == null) {
+					InputStream faceIn = getClass().getClassLoader().getResourceAsStream(faceFile);
+					byte[] faceBytes = faceIn.readAllBytes();
+					persoBiometricsDto.setFaceImagePortrait(java.util.Base64.getEncoder().encodeToString(faceBytes));
+				}
+
+				InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile);
+				byte[] signatureBytes = in.readAllBytes();
+				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
+			}
+			else if ((ageGroup != null && ageGroup.equals("MINOR")) || (signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
 				InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile);
 				byte[] signatureBytes = in.readAllBytes();
 				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
