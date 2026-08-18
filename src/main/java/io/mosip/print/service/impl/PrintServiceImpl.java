@@ -279,6 +279,9 @@ public class PrintServiceImpl implements PrintService{
 
 	@Value("${mosip.print.signature.filename:signature.png}")
 	private String signatureFile;
+
+	@Value("${mosip.print.face.filename:face.png}")
+	private String faceFile;
 	
 	@Value("${print.service.send.data.fetchsize:5}")
 	private Integer fetchSize;
@@ -708,22 +711,34 @@ public class PrintServiceImpl implements PrintService{
 			}
 			String signature = getString(decryptedJson, "signature");
 			String process = persoRequestDto.getProcess();
-			boolean isAlienMinor = false;
-			if (process != null && process.startsWith("ALIEN") && persoRequestDto.getDateOfBirth() != null) {
+			String ageGroup = null;
+			if (process != null && process.startsWith("ALIEN")) {
 				try {
-					LocalDate dob = parseDateOfBirth(persoRequestDto.getDateOfBirth());
-					int age = Period.between(dob, LocalDate.now()).getYears();
-					isAlienMinor = age < 16;
+					List<String> tags = new ArrayList<>();
+					tags.add("AGE_GROUP");
+					Map<String, String> tagsPresent = utilities.getTags(registrationId, tags);
+					ageGroup = tagsPresent.get("AGE_GROUP");
 				} catch (Exception e) {
 					printLogger.warn(
-							"Could not parse dateOfBirth '{}' for alien-minor signature check, regId={}: {}",
-							persoRequestDto.getDateOfBirth(),
+							"Could not fetch AGE_GROUP tag for regId={}. Proceeding without it. Error: {}",
 							registrationId,
 							e.getMessage()
 					);
 				}
 			}
-			if (isAlienMinor||(signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
+
+			if ((ageGroup != null && ageGroup.equals("CHILD"))) {
+				if (persoBiometricsDto.getFaceImagePortrait() == null) {
+					InputStream faceIn = getClass().getClassLoader().getResourceAsStream(faceFile);
+					byte[] faceBytes = faceIn.readAllBytes();
+					persoBiometricsDto.setFaceImagePortrait(java.util.Base64.getEncoder().encodeToString(faceBytes));
+				}
+
+				InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile);
+				byte[] signatureBytes = in.readAllBytes();
+				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
+			}
+			else if ((ageGroup != null && ageGroup.equals("MINOR")) || (signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
 				InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile);
 				byte[] signatureBytes = in.readAllBytes();
 				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));

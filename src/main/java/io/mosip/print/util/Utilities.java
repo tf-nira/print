@@ -14,8 +14,7 @@ import io.mosip.kernel.core.util.DateUtils;
 import io.mosip.kernel.core.util.JsonUtils;
 import io.mosip.print.core.http.RequestWrapper;
 import io.mosip.print.core.http.ResponseWrapper;
-import io.mosip.print.dto.FieldDTO;
-import io.mosip.print.dto.FieldResponseDTO;
+import io.mosip.print.dto.*;
 import io.mosip.print.exception.*;
 import io.mosip.print.idrepo.dto.ResponseDTO;
 import org.json.simple.JSONObject;
@@ -28,7 +27,6 @@ import org.springframework.stereotype.Component;
 import io.mosip.print.constant.ApiName;
 import io.mosip.print.constant.LoggerFileConstant;
 import io.mosip.print.constant.MappingJsonConstants;
-import io.mosip.print.dto.ErrorDTO;
 import io.mosip.print.idrepo.dto.IdResponseDTO1;
 import io.mosip.print.logger.PrintLogger;
 import io.mosip.print.service.PrintRestClientService;
@@ -350,4 +348,37 @@ public class Utilities {
 		return fieldResponseDto.getFields();
 	}
 
+	public Map<String, String> getTags(String id, List<String> tagNames) throws ApisResourceAccessException, PacketManagerException, io.mosip.kernel.core.util.exception.JsonProcessingException, IOException {
+		TagRequestDto tagRequestDto = new TagRequestDto(id, tagNames);
+		RequestWrapper<TagRequestDto> request = new RequestWrapper<>();
+		request.setId(ID);
+		request.setVersion(VERSION);
+		request.setRequesttime(DateUtils.getUTCCurrentDateTime());
+		request.setRequest(tagRequestDto);
+		ResponseWrapper<TagResponseDto> response = (ResponseWrapper<TagResponseDto>) restClientService.postApi(ApiName.PACKETMANAGER_GET_TAGS, "", "", request, ResponseWrapper.class);
+
+		if (response.getErrors() != null && response.getErrors().size() > 0) {
+			ErrorDTO error=response.getErrors().get(0);
+			printLogger.error(LoggerFileConstant.SESSIONID.toString(), LoggerFileConstant.REGISTRATIONID.toString(),
+					id, JsonUtils.javaObjectToJsonString(response));
+			//This error code will return if requested tag is not present ,so returning null for that
+			if(error.getErrorCode().equalsIgnoreCase("KER-PUT-024"))
+				return null;
+			else {
+				ErrorDTO errorDTO = response.getErrors().iterator().next();
+				if (OBJECT_DOESNOT_EXISTS_ERROR_CODE.equalsIgnoreCase(errorDTO.getErrorCode()))
+					throw new ObjectDoesnotExistsException(errorDTO.getErrorCode(), errorDTO.getMessage());
+				else
+					throw new PacketManagerException(errorDTO.getErrorCode(), errorDTO.getMessage());
+			}
+		}
+
+		TagResponseDto tagResponseDto = null;
+		if (response.getResponse() != null) {
+			tagResponseDto = objMapper.readValue(JsonUtils.javaObjectToJsonString(response.getResponse()), TagResponseDto.class);
+
+		}
+
+		return tagResponseDto != null ? tagResponseDto.getTags() : null;
+	}
 }
