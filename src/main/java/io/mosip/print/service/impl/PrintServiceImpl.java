@@ -738,7 +738,7 @@ public class PrintServiceImpl implements PrintService{
 				byte[] signatureBytes = in.readAllBytes();
 				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
 			}
-			else if ((ageGroup != null && ageGroup.equals("MINOR")) || (signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
+			else if ((ageGroup != null && !ageGroup.equals("ADULT")) || (signature != null && signature.equalsIgnoreCase("Unable to Sign"))) {
 				InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile);
 				byte[] signatureBytes = in.readAllBytes();
 				persoBiometricsDto.setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
