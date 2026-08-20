@@ -465,17 +465,25 @@ public class PrintServiceImpl implements PrintService{
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
-			
-			// Skip sending to perso service if signature is null
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
-                printLogger.warn("Skipping perso service call for registration ID: {}. Reason: Signature not present", registrationId);
-				request.setIsProcessing(false);
-				request.setIsFailed(true);
-				request.setRemark("Signature not present");
-				request.setUpdatedBy("SYSTEM");
-				request.setUpdatedTimes(LocalDateTime.now());
-				cardDetailRepository.save(request);
-				return null;
+				boolean isAdultCitizen = !persoRequestDto.getProcess().startsWith("ALIEN")
+						&& "ADULT".equals(utilities.getTags(registrationId, List.of("AGE_GROUP")).get("AGE_GROUP"));
+
+				if (!isAdultCitizen) {
+					printLogger.warn("Skipping perso service call for registration ID: {}. Reason: Signature not present", registrationId);
+					request.setIsProcessing(false);
+					request.setIsFailed(true);
+					request.setRemark("Signature not present");
+					request.setUpdatedBy("SYSTEM");
+					request.setUpdatedTimes(LocalDateTime.now());
+					cardDetailRepository.save(request);
+					return null;
+				}
+
+				try (InputStream in = getClass().getClassLoader().getResourceAsStream(signatureFile)) {
+					byte[] signatureBytes = in.readAllBytes();
+					persoRequestDto.getBiometrics().setSignature(java.util.Base64.getEncoder().encodeToString(signatureBytes));
+				}
 			}
 
 			String response = serviceCaller.callPersoService(persoRequestDto);
