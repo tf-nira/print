@@ -929,7 +929,7 @@ public class PrintServiceImpl implements PrintService{
 			String datePart = cardDetail.getRegId().substring(15, 23);
 			LocalDate packetCreationDate = LocalDate.parse(datePart, REGID_DATE_FMT);
 			if (packetCreationDate.isAfter(CUTOFF_DATE)) return true;
-		}x
+		}
 
 		boolean isReadyToPush = false;
 		try {
