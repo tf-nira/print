@@ -14,5 +14,4 @@ import java.util.Map;
 @NoArgsConstructor
 public class TagResponseDto implements Serializable {
     Map<String, String> tags;
-
 }
