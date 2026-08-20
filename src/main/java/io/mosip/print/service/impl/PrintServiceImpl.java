@@ -465,7 +465,6 @@ public class PrintServiceImpl implements PrintService{
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
 					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
 
-			 printLogger.info("Card Expiry for id : {} is : {}", request.getRegId(), persoRequestDto.getDateOfExpiry());
 			
 			// Skip sending to perso service if signature is null
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
