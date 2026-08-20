@@ -251,6 +251,10 @@ public class PrintServiceImpl implements PrintService{
 
 	public static final String VID_TYPE = "registration.processor.id.repo.vidType";
 
+    private static final DateTimeFormatter REGID_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    private static final LocalDate CUTOFF_DATE = LocalDate.of(2025, 8, 22);
+
 	/** The cbeffutil. */
 	@Autowired
 	private CbeffUtil cbeffutil;
@@ -923,6 +927,12 @@ public class PrintServiceImpl implements PrintService{
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
 		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
 			return true;
+		}
+
+		if (cardDetail.getRegId().length() == 29) {
+			String datePart = cardDetail.getRegId().substring(15, 23);
+			LocalDate packetCreationDate = LocalDate.parse(datePart, REGID_DATE_FMT);
+			if (packetCreationDate.isAfter(CUTOFF_DATE)) return true;
 		}
 
 		boolean isReadyToPush = false;
