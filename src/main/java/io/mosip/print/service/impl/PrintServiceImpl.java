@@ -490,9 +490,7 @@ public class PrintServiceImpl implements PrintService{
 				}
 			}
 
-			if (!persoRequestDto.getProcess().startsWith("ALIEN")) {
-				printLogger.info("Card Details Signature for id : {} is : {}", request.getRegId(), persoRequestDto.getBiometrics().getSignature());
-			}
+			printLogger.info("Perso Request for id : {} is : {}", request.getRegId(), persoRequestDto);
 
 			String response = serviceCaller.callPersoService(persoRequestDto);
 
