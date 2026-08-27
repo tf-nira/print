@@ -298,6 +298,12 @@ public class PrintServiceImpl implements PrintService{
 
 	@Value("${print.service.send.notification.threads.count:10}")
 	private Integer numberOfNotificationThreads;
+
+	@Value("${print.service.enrollment.retry.fetchsize:100}")
+	private Integer enrollmentRetryFetchSize;
+
+	@Value("${print.service.enrollment.retry.threads.count:5}")
+	private Integer enrollmentRetryThreads;
 	
 	@Value("${print.service.demo.match.required:true}")
 	private Boolean isDemoMatchRequired;
@@ -328,9 +334,13 @@ public class PrintServiceImpl implements PrintService{
 
 	private static final String supportedLang = "eng";
 
+	private static final String DISTRICT_ONLY_RETRY_FAILED = "DISTRICT_ONLY_ENROLLMENT_RETRY_FAILED";
+
 	private ExecutorService executorService;
 
 	private ExecutorService notificationExecutorService;
+
+	private ExecutorService enrollmentRetryExecutorService;
 
 	@Autowired
 	private PersoServiceCaller serviceCaller;
@@ -359,6 +369,7 @@ public class PrintServiceImpl implements PrintService{
 	public void init() {
 		this.executorService = Executors.newFixedThreadPool(numberOfThreads, namedThreadFactory("perso-sender"));
 		this.notificationExecutorService = Executors.newFixedThreadPool(numberOfNotificationThreads, namedThreadFactory("notification-sender"));
+		this.enrollmentRetryExecutorService = Executors.newFixedThreadPool(enrollmentRetryThreads, namedThreadFactory("enrollment-retry"));
 	}
 
 	private ThreadFactory namedThreadFactory(String poolName) {
@@ -406,6 +417,19 @@ public class PrintServiceImpl implements PrintService{
 				})).collect(Collectors.toList());
 	}
 
+	@Scheduled(cron = "${print.service.enrollment.retry.cron:0 5/15 * * * ?}")
+	public void sendDistrictOnlyEnrollmentRecords() {
+		printLogger.info("Starting district-only enrollment retry job");
+		List<CardDetail> requests = cardDetailDao.fetchEnrollmentFailedRecords(enrollmentRetryFetchSize);
+
+		printLogger.info("Picked enrollment-failed records to retry: " + requests.size());
+		requests.stream().map(request -> CompletableFuture
+				.runAsync(() -> processSingleRequest(request, true), enrollmentRetryExecutorService).exceptionally(ex -> {
+					printLogger.error("Failed to retry enrollment record asynchronously: " + ex.getMessage(), ex);
+					return null;
+				})).collect(Collectors.toList());
+	}
+
 	@Scheduled(cron = "${print.service.reset.stuck.cards.cron:0 0 0 * * ?}")
 	public void resetStuckCardDetailRecords() {
 		printLogger.info("Starting batch job for resetting stuck card_detail records");
@@ -419,6 +443,10 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private Object processSingleRequest(CardDetail request) {
+		return processSingleRequest(request, false);
+	}
+
+	private Object processSingleRequest(CardDetail request, boolean enrollmentDistrictOnly) {
 		try {
 			// Check if this record is in the exclusion list — skip sending to perso
 			if (cardExclusionRepository.existsByRegId(request.getRegId())) {
@@ -467,7 +495,8 @@ public class PrintServiceImpl implements PrintService{
 
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true);
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, true,
+					enrollmentDistrictOnly);
 
 			if (persoRequestDto.getBiometrics().getSignature() == null) {
 				boolean isAdultCitizen = !persoRequestDto.getProcess().startsWith("ALIEN")
@@ -502,6 +531,7 @@ public class PrintServiceImpl implements PrintService{
 						printLogger.info("Request sent for transaction id: " + request.getTransactionId());
 						request.setIsProcessing(false);
 						request.setIsPushed(true);
+						request.setIsFailed(false);
 						request.setUpdatedBy("SYSTEM");
 						request.setUpdatedTimes(LocalDateTime.now());
 						cardDetailRepository.save(request);
@@ -518,10 +548,10 @@ public class PrintServiceImpl implements PrintService{
 					    } catch (Exception e) {
 					        printLogger.error("Error while extracting error message from response: " + e.getMessage(), e);
 					    }
-					    
+
 					    request.setIsProcessing(false);
 						request.setIsFailed(true);
-						request.setRemark(errorMessage);
+						request.setRemark(enrollmentDistrictOnly ? DISTRICT_ONLY_RETRY_FAILED + ": " + errorMessage : errorMessage);
 						request.setUpdatedBy("SYSTEM");
 						request.setUpdatedTimes(LocalDateTime.now());
 						cardDetailRepository.save(request);
@@ -578,7 +608,8 @@ public class PrintServiceImpl implements PrintService{
 
 			PersoRequestDto persoRequestDto = getPersoRequest(decodedCrdential,
 					eventModel.getEvent().getData().get("credentialType").toString(), ecryptionPin,
-					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, false);
+					eventModel.getEvent().getTransactionId(), sign, "UIN", false, eventModel, registrationId, false,
+					false);
 			//Need to uncomment once data correct confirmed
 //			serviceCaller.callPersoService(persoRequestDto);	
 		}catch (Exception e){
@@ -608,7 +639,8 @@ public class PrintServiceImpl implements PrintService{
 	private PersoRequestDto getPersoRequest(String credential, String credentialType, String encryptionPin,
 			String requestId, String sign,
 			String cardType,
-			boolean isPasswordProtected, EventModel eventModel, String registrationId, boolean isBioExtractionRequired) {
+			boolean isPasswordProtected, EventModel eventModel, String registrationId, boolean isBioExtractionRequired,
+			boolean enrollmentDistrictOnly) {
 		printLogger.debug("PrintServiceImpl::getDocuments()::entry");
 		PersoRequestDto persoRequestDto=new PersoRequestDto();
 		String credentialSubject;
@@ -642,12 +674,15 @@ public class PrintServiceImpl implements PrintService{
 			persoRequestDto.setAddress(persoAddressDto);
 
 			PersoEnrollmenetAddressDTO persoEnrollmenetAddressDTO=new PersoEnrollmenetAddressDTO();
-			persoEnrollmenetAddressDTO.setCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentCounty")));
 			persoEnrollmenetAddressDTO.setDistrict(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentDistrict")));
-			persoEnrollmenetAddressDTO.setSubCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentSubCounty")));
-			persoEnrollmenetAddressDTO.setParish(LocationUtil.trimExtraSpaces(DataUtil.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentParish"))));
-			persoEnrollmenetAddressDTO.setVillage(LocationUtil.trimExtraSpaces(DataUtil
-					.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentVillage"))));
+
+			if (!enrollmentDistrictOnly) {
+				persoEnrollmenetAddressDTO.setCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentCounty")));
+				persoEnrollmenetAddressDTO.setSubCounty(LocationUtil.trimExtraSpaces(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentSubCounty")));
+				persoEnrollmenetAddressDTO.setParish(LocationUtil.trimExtraSpaces(DataUtil.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentParish"))));
+				persoEnrollmenetAddressDTO.setVillage(LocationUtil.trimExtraSpaces(DataUtil
+						.getParishOrVillageCorrectData(getAttribute(decryptedJson, "applicantPlaceOfEnrolmentVillage"))));
+			}
 			persoRequestDto.setPlaceOfEnrollment(persoEnrollmenetAddressDTO);
 
 			persoRequestDto.setDateOfIssuance(getString(decryptedJson, "dateOfIssuance"));
