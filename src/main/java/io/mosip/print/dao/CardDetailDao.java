@@ -33,6 +33,19 @@ public class CardDetailDao {
 
 	    return records;
 	}
+
+	@Transactional
+	public List<CardDetail> fetchEnrollmentFailedRecords(int fetchSize) {
+		List<CardDetail> records = cardDetailRepository.getEnrollmentFailedRecords(fetchSize);
+
+		List<String> ids = records.stream().map(CardDetail::getTransactionId).collect(Collectors.toList());
+
+		if (!ids.isEmpty()) {
+			cardDetailRepository.markAsProcessing(ids);
+		}
+
+		return records;
+	}
 	
 	@Transactional
 	public List<NotificationStatus> fetchUnnotifiedRecords(int fetchSize) {
