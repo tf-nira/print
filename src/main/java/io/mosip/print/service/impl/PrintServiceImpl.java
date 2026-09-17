@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -251,9 +252,7 @@ public class PrintServiceImpl implements PrintService{
 
 	public static final String VID_TYPE = "registration.processor.id.repo.vidType";
 
-	private static final DateTimeFormatter REGID_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-	private static final LocalDate CUTOFF_DATE = LocalDate.of(2025, 8, 22);
 
 	/** The cbeffutil. */
 	@Autowired
@@ -310,6 +309,9 @@ public class PrintServiceImpl implements PrintService{
 	
 	@Value("#{T(java.util.Arrays).asList('${print.service.legacy.check.process-names:RENEWAL,MIGRATOR}')}")
 	private List<String> legacyCheckProcess;
+
+	@Value("#{T(java.util.Arrays).asList('${print.service.repeated.name.check.process-names:RENEWAL,UPDATE,FIRSTID}')}")
+	private List<String> repeatedNameCheckProcess;
 
 	@Value("#{'${print.service.card.check.bypass.process-names:}'.split(',')}")
 	private List<String> cardCheckBypassProcessNames;
@@ -956,14 +958,16 @@ public class PrintServiceImpl implements PrintService{
 	}
 	
 	private boolean isReadyToPush(CardDetail cardDetail, String process) {
-		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
-			return true;
+		// Repeated names check before demographic/migration validation
+		if (hasRepeatedNames(cardDetail, process)) {
+			printLogger.info("Repeated names detected for NIN: {} | [OtherName]={} | [GivenName]={} | [Surname]={}",
+					cardDetail.getNin(), cardDetail.getOtherName(), cardDetail.getGivenName(), cardDetail.getSurname());
+			cardDetail.setRemark("Repeated Names");
+			return false;
 		}
 
-		if (cardDetail.getRegId().length() == 29) {
-			String datePart = cardDetail.getRegId().substring(15, 23);
-			LocalDate packetCreationDate = LocalDate.parse(datePart, REGID_DATE_FMT);
-			if (packetCreationDate.isAfter(CUTOFF_DATE)) return true;
+		if (!isDemoMatchRequired || (process != null && !legacyCheckProcess.contains(process))) {
+			return true;
 		}
 
 		boolean isReadyToPush = false;
@@ -1035,6 +1039,44 @@ public class PrintServiceImpl implements PrintService{
 		return isReadyToPush;
 	}
 	
+	private boolean hasRepeatedNames(CardDetail cardDetail, String process) {
+		if (process == null || repeatedNameCheckProcess == null || repeatedNameCheckProcess.isEmpty()) {
+			return false;
+		}
+		boolean processApplicable = repeatedNameCheckProcess.stream()
+				.filter(p -> p != null && !p.trim().isEmpty())
+				.anyMatch(p -> p.trim().equalsIgnoreCase(process));
+		if (!processApplicable) {
+			return false;
+		}
+
+		Set<String> givenWords = nameWords(cardDetail.getGivenName());
+		Set<String> surnameWords = nameWords(cardDetail.getSurname());
+
+		for (String otherWord : nameWords(cardDetail.getOtherName())) {
+			if (givenWords.contains(otherWord) || surnameWords.contains(otherWord)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private Set<String> nameWords(String value) {
+		Set<String> words = new HashSet<>();
+		if (value == null) {
+			return words;
+		}
+		String decomposed = Normalizer.normalize(value, Normalizer.Form.NFD);
+		String diacriticsStripped = decomposed.replaceAll("\\p{M}", "");
+		String[] tokens = diacriticsStripped.replaceAll("[^a-zA-Z]+", " ").trim().split("\\s+");
+		for (String token : tokens) {
+			if (!token.isEmpty()) {
+				words.add(token.toLowerCase());
+			}
+		}
+		return words;
+	}
+
 	private boolean isDemographicMatch(CardDetail cardDetail, DemographicDto demo) {
 		return isIdentifierMatch(cardDetail.getNin(), demo.getNin())
 				&& isNameMatch(cardDetail.getGivenName(), getFirstValue(demo.getGivenName()))
